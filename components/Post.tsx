@@ -8,7 +8,6 @@ import ReactionButton from "@/components/ReactionButton";
 import ReactionList from "@/components/ReactionList";
 import ReactionPicker from "@/components/ReactionPicker";
 import { AnimatePresence, motion } from "motion/react";
-import { User } from "next-auth";
 import Caption from "./Caption";
 
 interface PostProps {
