@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
 function LoginButton({ callbackUrl }: { callbackUrl: string | null }) {
   const handleSignIn = () => {
@@ -18,16 +19,26 @@ function LoginButton({ callbackUrl }: { callbackUrl: string | null }) {
   )
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const search = useSearchParams()
   const callbackUrl = search.get("callbackUrl")
 
   return (
+    <>
+      <h1 className="mb-4 text-2xl font-bold">
+        Anmelden
+      </h1>
+      <LoginButton callbackUrl={callbackUrl} />
+    </>
+  )
+}
+
+export default function LoginPage() {
+  return (
     <main className="flex flex-col">
-        <h1 className="mb-4 text-2xl font-bold">
-          Anmelden
-        </h1>
-        <LoginButton callbackUrl={callbackUrl} />
-      </main>
+      <Suspense fallback={<div>Wird geladen...</div>}>
+        <LoginContent />
+      </Suspense>
+    </main>
   )
 }
