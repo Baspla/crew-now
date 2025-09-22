@@ -1,0 +1,1 @@
+ALTER TABLE `user_reactions` ADD `creation_date` integer NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE `posts` ADD `front_image_url` text;

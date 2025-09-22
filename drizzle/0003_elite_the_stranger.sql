@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `user_reactions_user_id_emoji_unique` ON `user_reactions` (`user_id`,`emoji`);
