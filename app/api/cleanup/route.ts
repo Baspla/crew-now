@@ -3,6 +3,8 @@ import { readdir, stat, unlink } from 'fs/promises';
 import { join, relative, resolve, normalize } from 'path';
 import { db, posts, userReactions, users } from '@/lib/db/schema';
 
+export const dynamic = 'force-dynamic'
+
 async function listFiles(dir: string): Promise<string[]> {
   let results: string[] = [];
   try {

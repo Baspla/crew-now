@@ -2,6 +2,8 @@ import { db, moment } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
     // This endpoint triggers a new moment creation.
     // It requires an internal token via header `x-internal-token` or query `token`
