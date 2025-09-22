@@ -1,63 +1,57 @@
-# Multi-Stage Build für ein optimiertes Next.js Projekt
-# Basisimage
-FROM oven/bun:1.2.22-slim AS base
+FROM oven/bun AS base
 
-# Abhängigkeiten installieren
+# Install dependencies only when needed
 FROM base AS deps
+
 WORKDIR /app
 
-# Installiere notwendige Build-Tools
-RUN apt-get update -y && \
-    apt-get install -y libc6-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install dependencies
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
 
-# Kopiere Abhängigkeitsdateien
-COPY package.json ./
-COPY bun.lock* ./
-
-# Installiere Abhängigkeiten
-RUN bun install
-
-# Build Phase
+# Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Stelle sicher, dass der public-Ordner existiert
-RUN mkdir -p public
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Disable telemetry during the build
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Next.js Build
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
 
-# Produktions-Phase
+# Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV production
 
-# Erstellen eines nicht-root Benutzers für verbesserte Sicherheit
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+# Disable telemetry
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Erstelle das public-Verzeichnis
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
 RUN mkdir -p public
 
-# Kopiere nur die notwendigen Dateien für die Produktion
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:bun .next
 
-# Wechseln zum nicht-root Benutzer
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:bun /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:bun /app/.next/static ./.next/static
+
 USER nextjs
 
-# Port-Freigabe und Gesundheitscheck
 EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
 
-# Next.js Server starten
+ENV PORT 3000
+
+# Set hostname to localhost
+ENV HOSTNAME "0.0.0.0"
+
 CMD ["bun", "server.js"]
