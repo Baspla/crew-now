@@ -25,6 +25,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Stelle sicher, dass der public-Ordner existiert
+RUN mkdir -p public
+
 # Next.js Build
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
@@ -40,10 +43,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Erstelle das public-Verzeichnis
 RUN mkdir -p public
 
 # Kopiere nur die notwendigen Dateien für die Produktion
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
