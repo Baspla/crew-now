@@ -4,6 +4,7 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login"
   },
+  trustHost: true,
   providers: [
     {
       type: "oidc",
