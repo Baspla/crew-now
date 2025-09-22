@@ -6,6 +6,8 @@ import { db, posts, users } from "@/lib/db/schema";
 import { eq, count, desc } from "drizzle-orm";
 import PostList from "@/components/PostList";
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProfilePage() {
   const session = await auth();
   const user = session?.user;

@@ -7,6 +7,8 @@ import PageHead from "@/components/PageHead";
 import PostHeader from "@/components/PostHeader";
 import Post from "@/components/Post";
 
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   params: { id: string };
 }

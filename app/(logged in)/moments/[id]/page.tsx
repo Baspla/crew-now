@@ -4,6 +4,8 @@ import { db, moment, posts, users } from "@/lib/db/schema";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   params: { id: string };
 }

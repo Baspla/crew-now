@@ -3,6 +3,8 @@ import { db, moment, posts } from "@/lib/db/schema";
 import { desc, count, countDistinct, and, gte, lte, isNull, or } from "drizzle-orm";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic'
+
 export default async function MomentsPage() {
   const allMoments = await db
     .select({

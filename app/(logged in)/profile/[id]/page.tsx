@@ -8,6 +8,8 @@ import UserLink from "@/components/UserLink";
 import PageHead from "@/components/PageHead";
 import Post from "@/components/Post";
 
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   params: { id: string };
 }

@@ -3,6 +3,8 @@ import { desc, eq } from "drizzle-orm";
 import PageHead from "@/components/PageHead";
 import PostList from "@/components/PostList";
 
+export const dynamic = 'force-dynamic'
+
 export default async function FeedPage() {
   const allPosts = await db
     .select({
