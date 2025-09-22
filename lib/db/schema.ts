@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, primaryKey, unique } from "drizzle-orm/sqlite-core";
-import { drizzle } from "drizzle-orm/libsql";
+import { drizzle } from "drizzle-orm/libsql/sqlite3";
 import { createClient } from "@libsql/client";
 import type { AdapterAccountType } from "next-auth/adapters";
 
