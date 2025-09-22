@@ -25,19 +25,16 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Aktiviere standalone Output für Next.js
-RUN echo '{\n  "output": "standalone"\n}' >> next.config.js
-
 # Next.js Build
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
 
 # Produktions-Phase
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Erstellen eines nicht-root Benutzers für verbesserte Sicherheit
 RUN addgroup --system --gid 1001 nodejs && \
@@ -53,8 +50,8 @@ USER nextjs
 
 # Port-Freigabe und Gesundheitscheck
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Next.js Server starten
 CMD ["bun", "server.js"]
