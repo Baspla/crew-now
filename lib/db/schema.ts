@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type { AdapterAccountType } from "next-auth/adapters";
 import Database from "better-sqlite3";
 
-const sqlite = new Database ('crewnow.db');
+const sqlite = new Database ('crewnow.db', { readonly: false, fileMustExist: true });
 export const db = drizzle({client: sqlite,logger: true});
 
 export const users = sqliteTable("users", {
