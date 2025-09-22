@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
-    "@libsql/client/sqlite3": "^0.15.15",
+    "@libsql/sqlite3": "^0.3.1",
     "@paralleldrive/cuid2": "^2.2.2",
     "drizzle": "^1.4.0",
     "drizzle-kit": "^0.31.4",
