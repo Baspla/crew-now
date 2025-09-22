@@ -1,10 +1,10 @@
 import { sqliteTable, text, integer, primaryKey, unique } from "drizzle-orm/sqlite-core";
-import { drizzle } from "drizzle-orm/libsql/sqlite3";
-import { createClient } from "@libsql/client";
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type { AdapterAccountType } from "next-auth/adapters";
+import Database from "better-sqlite3";
 
-const client = createClient({ url: "file:./dev.db" });
-export const db = drizzle(client);
+const sqlite = new Database ('crewnow.db');
+export const db = drizzle({client: sqlite,logger: true});
 
 export const users = sqliteTable("users", {
   id: text("id")

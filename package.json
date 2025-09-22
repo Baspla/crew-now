@@ -12,19 +12,16 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
-    "@libsql/sqlite3": "^0.3.1",
     "@paralleldrive/cuid2": "^2.2.2",
+    "better-sqlite3": "^12.3.0",
     "drizzle": "^1.4.0",
-    "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
     "motion": "^12.23.18",
     "next": "15.5.2",
     "next-auth": "5.0.0-beta.29",
     "node-fetch": "^3.3.2",
-    "sqlite3": "^5.1.7",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "ws": "^8.18.3"
+    "react-dom": "19.1.0"
   },
   "optionalDependencies": {
     "sharp": "^0.32.6"
@@ -36,6 +33,7 @@
     "@types/node": "^20.19.17",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.36.0",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4.1.13",

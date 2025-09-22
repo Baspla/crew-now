@@ -1,0 +1,14 @@
+ignoredBuiltDependencies:
+  - keccak
+  - scrypt
+  - secp256k1
+  - sha3
+  - unrs-resolver
+  - websocket
+
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - better-sqlite3
+  - core-js
+  - esbuild
+  - sharp
