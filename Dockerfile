@@ -34,7 +34,6 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
-RUN mkdir -p public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
