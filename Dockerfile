@@ -1,6 +1,6 @@
 # Multi-Stage Build für ein optimiertes Next.js Projekt
 # Basisimage
-FROM node:24-bookworm-slim AS base
+FROM oven/bun:1.2.22-slim AS base
 
 # Abhängigkeiten installieren
 FROM base AS deps
@@ -17,7 +17,7 @@ COPY package.json ./
 COPY bun.lock* ./
 
 # Installiere Abhängigkeiten
-RUN npm ci
+RUN bun install
 
 # Build Phase
 FROM base AS builder
@@ -30,7 +30,7 @@ RUN echo '{\n  "output": "standalone"\n}' >> next.config.js
 
 # Next.js Build
 ENV NEXT_TELEMETRY_DISABLED 1
-RUN npm run build
+RUN bun run build
 
 # Produktions-Phase
 FROM base AS runner
@@ -57,4 +57,4 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # Next.js Server starten
-CMD ["node", "server.js"]
+CMD ["bun", "server.js"]
