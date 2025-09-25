@@ -2,9 +2,12 @@ import { sqliteTable, text, integer, primaryKey, unique } from "drizzle-orm/sqli
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type { AdapterAccountType } from "next-auth/adapters";
 import Database from "better-sqlite3";
+import path from "path";
 
-const sqlite = new Database ('crewnow.db', { readonly: false });
-export const db = drizzle({client: sqlite,logger: true});
+const dbPath = process.env.DB_URI || path.join(process.cwd(), 'database', 'crewnow.db');
+console.log("Database path:", dbPath);
+const sqlite = new Database(dbPath, { readonly: false });
+export const db = drizzle({ client: sqlite, logger: true });
 
 export const users = sqliteTable("users", {
   id: text("id")
