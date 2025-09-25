@@ -8,6 +8,13 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 const dbPath = process.env.DB_URI || path.join(process.cwd(), 'database', 'crewnow.db');
 console.log("Database path:", dbPath);
+// Check if the database file is readonly
+try {
+  fs.accessSync(dbPath, fs.constants.W_OK);
+  console.log("Database file is writable");
+} catch (error) {
+  console.log("Database file is readonly");
+}
 
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) {
