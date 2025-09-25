@@ -7,15 +7,6 @@ import fs from "fs";
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 const dbPath = process.env.DB_URI || path.join(process.cwd(), 'database', 'crewnow.db');
-console.log("Database path:", dbPath);
-// Check if the database file is readonly
-try {
-  fs.accessSync(dbPath, fs.constants.W_OK);
-  console.log("Database file is writable");
-} catch (error) {
-  console.log("Database file is readonly");
-}
-
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
@@ -26,7 +17,7 @@ if (!dbExists) {
   fs.writeFileSync(dbPath, "");
   console.log("Database created, running migrations...");
   const tempSqlite = new Database(dbPath, { readonly: false, fileMustExist: false });
-  const tempDb = drizzle({ client: tempSqlite, logger: true });
+  const tempDb = drizzle({ client: tempSqlite, logger: process.env.LOG_DB ? true : false });
   migrate(tempDb, { migrationsFolder: './drizzle' });
   tempSqlite.close();
   console.log("Migrations completed");

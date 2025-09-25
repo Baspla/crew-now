@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import SignOutButton from './SignOutButton';
+import { Suspense } from 'react';
+import PostingStatusClient from './PostingStatusClient';
 
 export default function Navigation() {
   return (
@@ -15,6 +17,14 @@ export default function Navigation() {
           CrewNow
         </h2>
       </div>
+      {/* Timer within window */}
+      <Suspense fallback={null}>
+        <div className="flex-1 border-b border-gray-200 dark:border-gray-700 mb-0" />
+        <div className="text-xl font-bold flex flex-row justify-center text-gray-700 dark:text-gray-300 my-2">
+          <PostingStatusClient />
+        </div>
+        <div className="flex-1 border-b border-gray-200 dark:border-gray-700" />
+      </Suspense>
       <Link 
         href="/feed" 
         className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 md:px-3 md:py-2 md:rounded-md md:hover:bg-gray-100 md:dark:hover:bg-zinc-800"

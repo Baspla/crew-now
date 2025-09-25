@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db, posts } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import { processAndSave } from "@/lib/image";
+import { postsRemainingForUser } from "@/lib/postingRules";
 
 export async function createPost(formData: FormData) {
     const imageUrl = formData.get("imageUrl") as string | null;
@@ -15,6 +16,12 @@ export async function createPost(formData: FormData) {
     // Basic validations
     if (!userId) {
         throw new Error("User must be logged in to create a post");
+    }
+
+    // Enforce posting rules on the server
+    const remaining = postsRemainingForUser(userId);
+    if (remaining <= 0) {
+        throw new Error("Du hast dein Posting-Limit für Heute erreicht.");
     }
 
     if (!imageUrl) {

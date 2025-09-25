@@ -4,6 +4,7 @@ import { createPost } from "./actions";
 import { useState, useRef, useEffect } from "react";
 import PostImage from "../../../components/PostImage";
 import PageHead from "@/components/PageHead";
+import Countdown from "@/components/Countdown";
 
 export default function CreatePage() {
   // State für die verschiedenen Flow-Phasen
@@ -17,6 +18,8 @@ export default function CreatePage() {
   const [isCameraSupported, setIsCameraSupported] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captionText, setCaptionText] = useState('');
+  const [postsRemaining, setPostsRemaining] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -200,9 +203,23 @@ export default function CreatePage() {
 
   // Initialize camera on component mount
   useEffect(() => {
-    if (currentStep === 'preview') {
-      startCamera('environment');
-    }
+    // Load posting status first
+    const init = async () => {
+      try {
+        const res = await fetch('/api/posting-status', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          setPostsRemaining(data?.postsRemaining ?? 0);
+          setTimeLeft(data?.timeLeftInWindowSeconds ?? null);
+          if ((data?.postsRemaining ?? 0) > 0 && currentStep === 'preview') {
+            await startCamera('environment');
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    init();
 
     // Cleanup on unmount
     return () => {
@@ -212,6 +229,10 @@ export default function CreatePage() {
 
   // Handle form submission
   const handleSubmit = async (formData: FormData) => {
+    if (postsRemaining !== null && postsRemaining <= 0) {
+      setError('Du hast keine Posts mehr übrig.');
+      return;
+    }
     if (backCameraImage) {
       formData.set('imageUrl', backCameraImage);
     }
@@ -225,6 +246,16 @@ export default function CreatePage() {
   return (
     <div>
       <PageHead title="Neuen Post erstellen" backUrl="/feed" subtitle="Es wir Zeit für ein Bild" />
+
+      {/* Posting status banner */}
+      <div className="mb-4 flex items-center gap-3 text-sm">
+        {postsRemaining !== null && (
+          <div className='text-md bg-zinc-300 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-2 rounded-md'>
+            <span className="font-semibold">Hinweis: </span>
+            {postsRemaining > 0 ? `Du kannst noch ${postsRemaining} mal heute posten` : 'Limit für heute erreicht'}
+          </div>
+        )}
+      </div>
 
       {/* Step 1: Camera Preview */}
       {currentStep === 'preview' && (
@@ -248,7 +279,7 @@ export default function CreatePage() {
                   <button
                     type="button"
                     onClick={startCaptureSequence}
-                    disabled={!isCameraSupported || isCapturing}
+                    disabled={!isCameraSupported || isCapturing || (postsRemaining !== null && postsRemaining <= 0)}
                     className="w-14 h-14 bg-black text-white opacity-60 hover:opacity-80 disabled:bg-zinc-900 disabled:cursor-not-allowed rounded-full cursor-pointer transition-colors flex items-center justify-center "
                     title={isCapturing ? 'Aufnahme läuft...' : 'Beide Kameras aufnehmen (aktuelle zuerst)'}
                   >
@@ -282,6 +313,12 @@ export default function CreatePage() {
             <div className="text-center p-4">
               <p className="font-semibold">Bitte lächeln!</p>
               <p className="text-sm text-gray-600">Aktuelle Kamera zuerst, dann wird gewechselt...</p>
+            </div>
+          )}
+          {postsRemaining !== null && postsRemaining <= 0 && (
+            <div className="text-center p-4">
+              <p className="font-semibold text-red-600">Du hast dein Posting-Limit erreicht.</p>
+              <p className="text-sm text-gray-600">Warte auf das nächste Moment-Fenster.</p>
             </div>
           )}
         </div>
@@ -324,7 +361,8 @@ export default function CreatePage() {
             <form action={handleSubmit} className="flex-1">
               <button
                 type="submit"
-                className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white border-0 rounded-lg cursor-pointer text-base transition-colors font-semibold"
+                className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white border-0 rounded-lg cursor-pointer text-base transition-colors font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={postsRemaining !== null && postsRemaining <= 0}
               >
                 Post senden
               </button>
