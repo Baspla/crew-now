@@ -42,8 +42,6 @@ RUN \
 FROM base AS runner
 WORKDIR /app
 
-VOLUME ["/app/database"]
-
 ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED=1
@@ -60,6 +58,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
 RUN mkdir -p /app/database && chown nextjs:nodejs /app/database
+COPY --from=builder --chown=nextjs:nodejs /app/database/crewnow.db /app/database/crewnow.db
 
 USER nextjs
 
