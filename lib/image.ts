@@ -11,7 +11,7 @@ export const dataUrlToBuffer = (dataUrl: string) => {
 };
 
 export async function ensureUploadsDir() {
-  const uploadsDir = path.join(process.cwd(), "public", "uploads", "posts");
+  const uploadsDir = path.join(process.cwd(), "uploads", "posts");
   await fs.promises.mkdir(uploadsDir, { recursive: true });
   return uploadsDir;
 }

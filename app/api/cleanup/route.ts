@@ -33,19 +33,14 @@ function dbPathToFs(p?: string) {
   }
   // remove leading slash
   let cleaned = p.startsWith('/') ? p.slice(1) : p;
-  // If DB already stored 'public/...' use it, otherwise prepend 'public'
   const parts = cleaned.split('/').filter(Boolean);
   let fullPath: string;
-  if (parts[0] === 'public') {
-    fullPath = resolve(process.cwd(), ...parts);
-  } else {
-    fullPath = resolve(process.cwd(), 'public', ...parts);
-  }
+  fullPath = resolve(process.cwd(), ...parts);
   return normalize(fullPath);
 }
 
 export async function GET(request: Request) {
-  const uploadsDir = join(process.cwd(), 'public', 'uploads');
+  const uploadsDir = join(process.cwd(), 'uploads');
 
   // AUTH: require internal token via header `x-internal-token` or query `token`
   const url = new URL(request.url);

@@ -43,7 +43,7 @@ export async function createReaction(formData: FormData): Promise<CreateReaction
     const filename = `${crypto.randomUUID()}.jpg`;
 
     // Erstelle Uploads-Verzeichnis falls es nicht existiert
-    const uploadsDir = join(process.cwd(), "public", "uploads", "reactions");
+    const uploadsDir = join(process.cwd(), "uploads", "reactions");
     await mkdir(uploadsDir, { recursive: true });
 
     // Speichere (verarbeitetes) Bild
