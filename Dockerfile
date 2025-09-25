@@ -59,9 +59,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
-USER nextjs
+RUN mkdir -p /app/database && chown nextjs:nodejs /app/database
 
-RUN mkdir -p /app/database
+USER nextjs
 
 EXPOSE 3000
 
