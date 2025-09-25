@@ -1,5 +1,3 @@
-# syntax=docker.io/docker/dockerfile:1
-
 FROM node:24-alpine AS base
 
 # Install dependencies only when needed
@@ -58,7 +56,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
 RUN mkdir -p /app/database && chown nextjs:nodejs /app/database
-COPY --from=builder --chown=nextjs:nodejs /app/database/crewnow.db /app/database/crewnow.db
 
 USER nextjs
 
