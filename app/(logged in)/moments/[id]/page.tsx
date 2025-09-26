@@ -7,11 +7,11 @@ import Link from "next/link";
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function MomentPage({ params }: PageProps) {
-  const momentId = params.id;
+  const { id: momentId } = await params;
   
   // Get the moment details
   const momentData = await db

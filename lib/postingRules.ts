@@ -96,15 +96,24 @@ export function hasUserPostedSinceLatestMoment(userId: string): boolean {
   return !!row;
 }
 
-export function postsRemainingForUser(userId: string): number {
+export const POSTS_ALLOWED_IF_IN_WINDOW = envInt(
+  process.env.POSTS_ALLOWED_IF_IN_WINDOW,
+  POSTS_ALLOWED_IF_POSTED_IN_WINDOW,
+);
+
+export function postsRemainingForUser(userId: string, now: Date = new Date()): number {
   const start = getLatestMomentStart();
   if (!start) return 0;
 
+  const windowEnd = new Date(start.getTime() + POST_WINDOW_SECONDS * 1000);
+  const isNowInWindow = now >= start && now <= windowEnd;
+
   const count = countUserPostsSinceLatestMoment(userId);
-  const inWindow = hasUserPostedInWindow(userId);
-  const limit = inWindow
-    ? POSTS_ALLOWED_IF_POSTED_IN_WINDOW
-    : POSTS_ALLOWED_IF_POSTED_OUTSIDE_WINDOW;
+  const limit = isNowInWindow
+    ? POSTS_ALLOWED_IF_IN_WINDOW
+    : hasUserPostedInWindow(userId, now)
+      ? POSTS_ALLOWED_IF_POSTED_IN_WINDOW
+      : POSTS_ALLOWED_IF_POSTED_OUTSIDE_WINDOW;
 
   return Math.max(0, limit - count);
 }

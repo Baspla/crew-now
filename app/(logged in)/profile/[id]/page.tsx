@@ -11,11 +11,11 @@ import Post from "@/components/Post";
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ProfilePage({ params }: PageProps) {
-  const userId = params.id;
+  const { id: userId } = await params;
 
   // Get user data
   const user = await db

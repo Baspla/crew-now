@@ -1,12 +1,21 @@
-import { db, posts, users } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { db, posts, users, moment } from "@/lib/db/schema";
+import { desc, eq, gte } from "drizzle-orm";
 import PageHead from "@/components/PageHead";
 import PostList from "@/components/PostList";
 
 export const dynamic = 'force-dynamic'
 
 export default async function FeedPage() {
-  const allPosts = await db
+  // Neueste Moment-Startzeit ermitteln
+  const latestMoment = await db
+    .select({ startDate: moment.startDate })
+    .from(moment)
+    .orderBy(desc(moment.startDate))
+    .limit(1);
+
+  const latestStart = latestMoment[0]?.startDate ?? null;
+
+  const baseQuery = db
     .select({
       id: posts.id,
       imageUrl: posts.imageUrl,
@@ -19,7 +28,12 @@ export default async function FeedPage() {
     })
     .from(posts)
     .leftJoin(users, eq(posts.userId, users.id))
-    .orderBy(desc(posts.creationDate));
+    .orderBy(desc(posts.creationDate))
+    .limit(50);
+
+  const allPosts = latestStart
+    ? await baseQuery.where(gte(posts.creationDate, latestStart))
+    : await baseQuery;
 
   return (
     <main>

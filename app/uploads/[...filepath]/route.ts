@@ -5,11 +5,11 @@ import { stat } from 'fs/promises';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filepath: string[] } }
+  { params }: { params: Promise<{ filepath: string[] }> }
 ) {
   try {
     // Konstruiere den Dateipfad aus den URL-Parametern
-    const filepath = params.filepath;
+    const { filepath } = await params;
     
     if (!filepath || filepath.length === 0) {
       return new NextResponse('File path required', { status: 400 });

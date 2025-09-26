@@ -24,7 +24,7 @@ if (!dbExists) {
 }
 
 const sqlite = new Database(dbPath, { readonly: false, fileMustExist: false });
-export const db = drizzle({ client: sqlite, logger: true });
+export const db = drizzle({ client: sqlite, logger: process.env.LOG_DB ? true : false });
 
 export const users = sqliteTable("users", {
   id: text("id")
