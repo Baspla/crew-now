@@ -1,4 +1,4 @@
-import PageHead from "@/components/PageHead";
+import PageHead from "@/components/layout/PageHead";
 import { db, moment, posts } from "@/lib/db/schema";
 import { desc, count, countDistinct, and, gte, lte, isNull, or } from "drizzle-orm";
 import Link from "next/link";

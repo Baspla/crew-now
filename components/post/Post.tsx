@@ -1,12 +1,12 @@
 "use client";
 import React, { useEffect } from "react";
 import Link from "next/link";
-import PostImage from "@/components/PostImage";
-import PostHeader from "@/components/PostHeader";
+import PostImage from "@/components/post/PostImage";
+import PostHeader from "@/components/post/PostHeader";
 import type { Post } from "@/lib/db/schema";
-import ReactionButton from "@/components/ReactionButton";
-import ReactionList from "@/components/ReactionList";
-import ReactionPicker from "@/components/ReactionPicker";
+import ReactionButton from "@/components/post/reactions/ReactionButton";
+import ReactionList from "@/components/post/reactions/ReactionList";
+import ReactionPicker from "@/components/post/reactions/ReactionPicker";
 import { AnimatePresence, motion } from "motion/react";
 import Caption from "./Caption";
 

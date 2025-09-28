@@ -2,8 +2,8 @@
 
 import { createPost } from "./actions";
 import { useState, useRef, useEffect } from "react";
-import PostImage from "../../../components/PostImage";
-import PageHead from "@/components/PageHead";
+import PostImage from "../../../components/post/PostImage";
+import PageHead from "@/components/layout/PageHead";
 import Countdown from "@/components/Countdown";
 
 export default function CreatePage() {

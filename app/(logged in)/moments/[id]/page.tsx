@@ -1,5 +1,5 @@
-import PageHead from "@/components/PageHead";
-import PostList from "@/components/PostList";
+import PageHead from "@/components/layout/PageHead";
+import PostList from "@/components/post/PostList";
 import { db, moment, posts, users } from "@/lib/db/schema";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import Link from "next/link";

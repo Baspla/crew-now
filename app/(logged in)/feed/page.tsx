@@ -1,7 +1,7 @@
 import { db, posts, users, moment } from "@/lib/db/schema";
 import { desc, eq, gte } from "drizzle-orm";
-import PageHead from "@/components/PageHead";
-import PostList from "@/components/PostList";
+import PageHead from "@/components/layout/PageHead";
+import PostList from "@/components/post/PostList";
 
 export const dynamic = 'force-dynamic'
 

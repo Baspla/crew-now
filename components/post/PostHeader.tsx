@@ -1,6 +1,6 @@
 
 import ProfilePicture from "./ProfilePicture";
-import UserLink from "./UserLink";
+import UserLink from "./post/UserLink";
 import DateDisplay from "./DateDisplay";
 
 type PostHeaderProps = {

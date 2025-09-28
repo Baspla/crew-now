@@ -1,6 +1,6 @@
 import ProfilePicture from "./ProfilePicture";
 import UserLink from "./UserLink";
-import DateDisplay from "./DateDisplay";
+import DateDisplay from "../DateDisplay";
 
 interface CommentProps {
   id: string;

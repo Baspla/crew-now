@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import PageHead from "@/components/PageHead";
+import PageHead from "@/components/layout/PageHead";
 import { createReaction, getUserReactions } from "./actions";
-import ReactionBubble from "@/components/ReactionBubble";
+import ReactionBubble from "@/components/post/reactions/ReactionBubble";
 import { motion } from "motion/react";
 import type { UserReaction } from "@/lib/db/schema";
 import { reactionEmojis } from "@/lib/reactions";

@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
-import PageHead from "@/components/PageHead";
-import ProfilePicture from "@/components/ProfilePicture";
-import ReactionEditor from "@/components/ReactionEditor";
+import PageHead from "@/components/layout/PageHead";
+import ProfilePicture from "@/components/post/ProfilePicture";
+import ReactionEditor from "@/components/post/reactions/ReactionEditor";
 import { db, posts, users } from "@/lib/db/schema";
 import { eq, count, desc } from "drizzle-orm";
-import PostList from "@/components/PostList";
+import PostList from "@/components/post/PostList";
 
 export const dynamic = 'force-dynamic'
 

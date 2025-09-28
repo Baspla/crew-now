@@ -1,11 +1,11 @@
-import Comment from "@/components/Comment";
-import ReactionBubble from "@/components/ReactionBubble";
+import Comment from "@/components/post/Comment";
+import ReactionBubble from "@/components/post/reactions/ReactionBubble";
 import { db, posts, users, comments, reactions, userReactions } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
-import PageHead from "@/components/PageHead";
+import PageHead from "@/components/layout/PageHead";
 import PostHeader from "@/components/PostHeader";
-import Post from "@/components/Post";
+import Post from "@/components/post/Post";
 
 export const dynamic = 'force-dynamic'
 

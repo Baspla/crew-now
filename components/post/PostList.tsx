@@ -1,5 +1,5 @@
 import React from "react";
-import Post, { PostWithReactions } from "@/components/Post";
+import Post, { PostWithReactions } from "@/components/post/Post";
 import type { Post as DBPost } from "@/lib/db/schema";
 
 type ExtendedPost = PostWithReactions & {

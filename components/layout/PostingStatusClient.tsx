@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import Countdown from "./Countdown";
+import Countdown from "../Countdown";
 import Link from "next/link";
 
 type Status = {
