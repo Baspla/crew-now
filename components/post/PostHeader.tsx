@@ -1,7 +1,7 @@
 
 import ProfilePicture from "./ProfilePicture";
-import UserLink from "./post/UserLink";
-import DateDisplay from "./DateDisplay";
+import UserLink from "./UserLink";
+import DateDisplay from "../DateDisplay";
 
 type PostHeaderProps = {
   userId: string;
