@@ -69,7 +69,7 @@ async function createNewMoment() {
 
     // Check if the hash for today's time is in the future
     if (hashTime > now) {
-        console.log('Hash for today\'s time is in the future.');
+        console.log('Hash for today\'s time is in the future. (It will be at', new Date(hashTime).toISOString() + ')');
         return;
     }
 
