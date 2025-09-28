@@ -29,6 +29,7 @@ export async function GET(request: Request) {
 }
 
 async function createNewMoment() {
+    return;
     // create a new momemnt starting now.
     // update the previous moment to end now.
     const now = Date.now();
