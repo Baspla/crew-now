@@ -83,4 +83,22 @@ async function createNewMoment() {
     // Create a new moment starting now
     await db.insert(moment).values({ startDate: new Date(now), endDate: null });
     console.log('New moment created at', new Date(now).toISOString());
+
+    // Send discord Webhook notification (if configured)
+    const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
+    const WEBHOOK_MESSAGE = process.env.WEBHOOK_MESSAGE || 'Crew Now Time!';
+    if (WEBHOOK_URL) {
+        try {
+            await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: WEBHOOK_MESSAGE }),
+            });
+        } catch (error) {
+            console.error('Error sending webhook notification', error);
+        }
+    }
+    return;
 }
