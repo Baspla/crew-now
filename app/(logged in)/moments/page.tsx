@@ -46,10 +46,10 @@ export default async function MomentsPage() {
 
   return (
     <main>
-      <PageHead title="Momente" subtitle="Memories of days gone by" backUrl="/feed" />
+      <PageHead title="Tage" subtitle="Memories of days gone by" backUrl="/feed" />
       <div>
         {allMoments.length === 0 ? (
-          <p>Noch keine Momente vorhanden.</p>
+          <p>Noch keine Tage vorhanden.</p>
         ) : (
           allMoments.map((momentItem) => (
             <div key={momentItem.id} className="mb-4 p-4">
