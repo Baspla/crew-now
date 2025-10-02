@@ -89,16 +89,24 @@ async function createNewMoment() {
     const WEBHOOK_MESSAGE = process.env.WEBHOOK_MESSAGE || 'Crew Now Time!';
     if (WEBHOOK_URL) {
         try {
-            await fetch(WEBHOOK_URL, {
+            console.log('Sending webhook notification to', WEBHOOK_URL);
+            const response = await fetch(WEBHOOK_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ content: WEBHOOK_MESSAGE }),
             });
+            if (!response.ok) {
+                console.error('Failed to send webhook notification', await response.text());
+            } else {
+                console.log('Webhook notification sent successfully');
+            }
         } catch (error) {
             console.error('Error sending webhook notification', error);
         }
+    } else {
+        console.log('No WEBHOOK_URL configured, skipping webhook notification.');
     }
     return;
 }
