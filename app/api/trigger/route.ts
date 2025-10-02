@@ -10,6 +10,10 @@ export async function GET(request: Request) {
     // It requires an internal token via header `x-internal-token` or query `token`
     const url = new URL(request.url);
     const tokenFromQuery = url.searchParams.get('token');
+    const forced = url.searchParams.get('force') === 'true';
+    if (forced) {
+        console.log('Force flag detected, creating new moment regardless of time checks');
+    }
     const headerToken = request.headers.get('x-internal-token');
     const TOKEN = process.env.BACKEND_TOKEN || '';
 
@@ -21,7 +25,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
     try {
-        await createNewMoment();
+        await createNewMoment(forced);
         return NextResponse.json({ success: true });
     } catch (err) {
         console.error('Error creating new moment', err);
@@ -29,7 +33,7 @@ export async function GET(request: Request) {
     }
 }
 
-async function createNewMoment() {
+async function createNewMoment(forced: boolean) {
     const now = Date.now();
     const startOfDay = new Date();
     startOfDay.setHours(8, 0, 0, 0); // Starting time of day
@@ -37,7 +41,7 @@ async function createNewMoment() {
     endOfDay.setHours(20, 0, 0, 0); // Ending time of day
 
     // Check if current time is between starting time of day and ending time of day
-    if (now < startOfDay.getTime() || now > endOfDay.getTime()) {
+    if ((now < startOfDay.getTime() || now > endOfDay.getTime()) && !forced) {
         console.log('Current time is outside the allowed time range.');
         return;
     }
@@ -46,7 +50,7 @@ async function createNewMoment() {
     const lastMoment = await db.select().from(moment).orderBy(desc(moment.startDate)).limit(1);
 
     // Check if a moment was already created today
-    if (lastMoment.length > 0) {
+    if (lastMoment.length > 0 && !forced) {
         const last = lastMoment[0];
         const lastMomentDate = new Date(last.startDate);
         const today = new Date();
@@ -68,7 +72,7 @@ async function createNewMoment() {
     const hashTime = startOfDay.getTime() + (numericHash % hashRange);
 
     // Check if the hash for today's time is in the future
-    if (hashTime > now) {
+    if (hashTime > now && !forced) {
         console.log('Hash for today\'s time is in the future. (It will be at', new Date(hashTime).toISOString() + ')');
         return;
     }

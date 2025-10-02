@@ -12,19 +12,20 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 const dbExists = fs.existsSync(dbPath);
+const logEnabled = process.env.DB_LOG === 'true';
 
 if (!dbExists) {
   fs.writeFileSync(dbPath, "");
   console.log("Database created, running migrations...");
   const tempSqlite = new Database(dbPath, { readonly: false, fileMustExist: false });
-  const tempDb = drizzle({ client: tempSqlite, logger: process.env.LOG_DB ? true : false });
+  const tempDb = drizzle({ client: tempSqlite, logger: logEnabled ? true : false });
   migrate(tempDb, { migrationsFolder: './drizzle' });
   tempSqlite.close();
   console.log("Migrations completed");
 }
 
 const sqlite = new Database(dbPath, { readonly: false, fileMustExist: false });
-export const db = drizzle({ client: sqlite, logger: process.env.LOG_DB ? true : false });
+export const db = drizzle({ client: sqlite, logger: logEnabled ? true : false });
 
 export const users = sqliteTable("users", {
   id: text("id")

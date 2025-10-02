@@ -1,0 +1,249 @@
+"use client";
+
+import { useAnimationControls } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export type CaptureStep = "inactive" | "preview" | "captured" | "error";
+export type CameraType = "environment" | "user";
+
+interface PostingStatusResponse {
+  postsRemaining?: number;
+  timeLeftInWindowSeconds?: number | null;
+}
+
+export function useCaptureFlow() {
+  // Flow / UI
+  const [currentStep, setCurrentStep] = useState<CaptureStep>("inactive");
+  const [error, setError] = useState<string | null>(null);
+
+  // Kamera / Media
+  const [currentCamera, setCurrentCamera] = useState<CameraType>("environment");
+  const [isCameraSupported, setIsCameraSupported] = useState(true);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isFlipping, setIsFlipping] = useState(false);
+  const [lastVideoHeight, setLastVideoHeight] = useState<number>(360);
+
+  // Bilder
+  const [backCameraImage, setBackCameraImage] = useState<string | null>(null);
+  const [frontCameraImage, setFrontCameraImage] = useState<string | null>(null);
+
+  // Meta
+  const [captionText, setCaptionText] = useState("");
+  const [postsRemaining, setPostsRemaining] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  // Refs & Animation
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const flipControls = useAnimationControls();
+
+  // --- Kamera Utility ------------------------------------------------------
+  const checkCameraSupport = useCallback(() => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setIsCameraSupported(false);
+      setError("Kamera wird von diesem Browser nicht unterstützt");
+      setCurrentStep("error");
+      return false;
+    }
+    return true;
+  }, []);
+
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const startCamera = useCallback(
+    async (facingMode: CameraType) => {
+      if (!checkCameraSupport()) return;
+      try {
+        setError(null);
+        stopStream();
+        const constraints: MediaStreamConstraints = {
+          video: {
+            facingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          const tryUpdateHeight = () => {
+            const vh = videoRef.current?.videoHeight || 0;
+            if (vh > 0) {
+              const maxDisplay = typeof window !== "undefined" ? Math.round(window.innerHeight * 0.6) : vh;
+              setLastVideoHeight(Math.min(vh, maxDisplay));
+            }
+          };
+          tryUpdateHeight();
+          videoRef.current.addEventListener("loadedmetadata", tryUpdateHeight, { once: true });
+        }
+      } catch (err) {
+        console.error("Fehler beim Zugriff auf die Kamera:", err);
+        if (err instanceof Error) {
+          if (err.name === "NotAllowedError") setError("Kamera-Zugriff wurde verweigert. Bitte erlauben.");
+          else if (err.name === "NotFoundError") setError("Keine Kamera gefunden.");
+          else if (err.name === "NotReadableError") setError("Kamera ist bereits in Verwendung.");
+          else setError(`Kamera-Fehler: ${err.message}`);
+        } else setError("Unbekannter Kamera-Fehler aufgetreten.");
+        setCurrentStep("error");
+      }
+    },
+    [checkCameraSupport, stopStream]
+  );
+
+  const captureImageFromVideo = useCallback((): string | null => {
+    if (!videoRef.current || !canvasRef.current) {
+      setError("Kamera oder Canvas nicht verfügbar");
+      return null;
+    }
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setError("Canvas-Kontext nicht verfügbar");
+      return null;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    if (currentCamera === "user") {
+      ctx.save();
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
+    return canvas.toDataURL("image/jpeg", 0.8);
+  }, [currentCamera]);
+
+  const scrollPreviewIntoView = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }
+  }, []);
+
+  const switchCamera = useCallback(async () => {
+    if (isFlipping) return;
+    setIsFlipping(true);
+    try {
+      await flipControls.start({ rotateY: 90, transition: { duration: 0.25, ease: "easeIn" } });
+      const newCamera = currentCamera === "environment" ? "user" : "environment";
+      setCurrentCamera(newCamera);
+      await startCamera(newCamera);
+      await flipControls.set({ scaleX: newCamera === "user" ? -1 : 1 });
+      await flipControls.start({ rotateY: 0, transition: { duration: 0.25, ease: "easeOut" } });
+      setTimeout(scrollPreviewIntoView, 50);
+    } finally {
+      setIsFlipping(false);
+    }
+  }, [currentCamera, flipControls, isFlipping, scrollPreviewIntoView, startCamera]);
+
+  const startCaptureSequence = useCallback(async () => {
+    setIsCapturing(true);
+    setError(null);
+    try {
+      const firstImage = captureImageFromVideo();
+      if (!firstImage) {
+        setError("Fehler beim Aufnehmen des ersten Bildes");
+        setIsCapturing(false);
+        return;
+      }
+      const firstCameraType = currentCamera;
+      const otherCamera = currentCamera === "environment" ? "user" : "environment";
+      await startCamera(otherCamera);
+      setTimeout(() => {
+        const secondImage = captureImageFromVideo();
+        if (!secondImage) {
+          setError("Fehler beim Aufnehmen des zweiten Bildes");
+          setIsCapturing(false);
+          return;
+        }
+        if (firstCameraType === "environment") {
+          setBackCameraImage(firstImage);
+          setFrontCameraImage(secondImage);
+        } else {
+          setFrontCameraImage(firstImage);
+          setBackCameraImage(secondImage);
+        }
+        stopStream();
+        setIsCapturing(false);
+        setCurrentStep("captured");
+      }, 1000);
+    } catch (err) {
+      console.error("Fehler beim Capture-Sequence:", err);
+      setError("Fehler beim Aufnehmen der Bilder");
+      setIsCapturing(false);
+    }
+  }, [captureImageFromVideo, currentCamera, startCamera, stopStream]);
+
+  const retake = useCallback(() => {
+    setBackCameraImage(null);
+    setFrontCameraImage(null);
+    setCaptionText("");
+    setCurrentStep("preview");
+    setCurrentCamera("environment");
+    startCamera("environment");
+  }, [startCamera]);
+
+  // Initial Posting Status + Kamera Start
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const res = await fetch("/api/posting-status", { cache: "no-store" });
+        if (res.ok) {
+          const data: PostingStatusResponse = await res.json();
+          setPostsRemaining(data?.postsRemaining ?? 0);
+          setTimeLeft(data?.timeLeftInWindowSeconds ?? null);
+          // Kamera wird erst durch expliziten Nutzer-Klick aktiviert (Schritt 'inactive' -> 'preview')
+        }
+      } catch {
+        // ignore
+      }
+    };
+    init();
+    return () => stopStream();
+  }, [currentStep, startCamera, stopStream]);
+
+  const activateCamera = useCallback(async () => {
+    setCurrentStep("preview");
+    await startCamera("environment");
+  }, [startCamera]);
+
+  return {
+    // State
+    currentStep,
+    currentCamera,
+    backCameraImage,
+    frontCameraImage,
+    isCameraSupported,
+    isCapturing,
+    captionText,
+    postsRemaining,
+    timeLeft,
+    lastVideoHeight,
+    error,
+    isFlipping,
+    // Refs & Animation
+    videoRef,
+    canvasRef,
+    flipControls,
+    // Actions
+    setCaptionText,
+    setCurrentStep,
+    switchCamera,
+    startCaptureSequence,
+    retake,
+    startCamera,
+    setError,
+    activateCamera,
+  };
+}
