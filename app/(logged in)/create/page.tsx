@@ -2,6 +2,7 @@
 
 import { createPost } from "./actions";
 import { useState, useRef, useEffect } from "react";
+import { motion, useAnimationControls } from "motion/react";
 import PostImage from "../../../components/post/PostImage";
 import PageHead from "@/components/layout/PageHead";
 import Countdown from "@/components/Countdown";
@@ -20,10 +21,13 @@ export default function CreatePage() {
   const [captionText, setCaptionText] = useState('');
   const [postsRemaining, setPostsRemaining] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [lastVideoHeight, setLastVideoHeight] = useState<number>(360); // Mindesthöhe für Container, aktualisiert nach Kamera-Start
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const flipControls = useAnimationControls();
+  const [isFlipping, setIsFlipping] = useState(false);
 
   // Check if camera is supported
   const checkCameraSupport = () => {
@@ -67,6 +71,18 @@ export default function CreatePage() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        // Nach dem Start Höhe merken (nur wenn > 0, sonst alten Wert behalten)
+        const tryUpdateHeight = () => {
+          const vh = videoRef.current?.videoHeight || 0;
+            if (vh > 0) {
+              // Maximal 60vh (wie Styling) – Berechnung nur im Client
+              const maxDisplay = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.6) : vh;
+              setLastVideoHeight(Math.min(vh, maxDisplay));
+            }
+        };
+        // Direkt versuchen und zusätzlich bei loadedmetadata erneut
+        tryUpdateHeight();
+        videoRef.current.addEventListener('loadedmetadata', tryUpdateHeight, { once: true });
       }
     } catch (err) {
       console.error('Fehler beim Zugriff auf die Kamera:', err);
@@ -103,12 +119,21 @@ export default function CreatePage() {
       return null;
     }
 
-    // Set canvas dimensions to match video
+    // Canvas-Dimensionen an Videoframe anpassen
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Draw the video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Horizontale Spiegelung (klassisches Selfie) falls Frontkamera aktiv ist ("user").
+    // Vorgehen: erst nach rechts verschieben (translate(canvas.width, 0)), dann scale(-1, 1).
+    if (currentCamera === 'user') {
+      context.save();
+      context.translate(canvas.width, 0); // Ursprung nach rechts verschieben
+      context.scale(-1, 1); // Horizontal spiegeln
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.restore();
+    } else {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
 
     // Convert to base64 data URL
     return canvas.toDataURL('image/jpeg', 0.8);
@@ -127,14 +152,28 @@ export default function CreatePage() {
 
   // Switch between cameras
   const switchCamera = async () => {
-    const newCamera = currentCamera === 'environment' ? 'user' : 'environment';
-    setCurrentCamera(newCamera);
-    await startCamera(newCamera);
-    
-    // Scroll the preview into view after camera switch
-    setTimeout(() => {
-      scrollPreviewIntoView();
-    }, 100); // Small delay to ensure camera has started
+    if (isFlipping) return; // Verhindert mehrfachen schnellen Klick
+    setIsFlipping(true);
+    try {
+      // Erste Hälfte der Flip-Animation (90°)
+      await flipControls.start({ rotateY: 90, transition: { duration: 0.25, ease: 'easeIn' } });
+
+      const newCamera = currentCamera === 'environment' ? 'user' : 'environment';
+      setCurrentCamera(newCamera);
+      await startCamera(newCamera);
+
+      // Spiegelzustand anwenden (Skalierung) – kein Übergang nötig, direkt setzen
+      await flipControls.set({ scaleX: newCamera === 'user' ? -1 : 1 });
+
+      // Zweite Hälfte zurück zu 0°
+      await flipControls.start({ rotateY: 0, transition: { duration: 0.25, ease: 'easeOut' } });
+
+      setTimeout(() => {
+        scrollPreviewIntoView();
+      }, 50);
+    } finally {
+      setIsFlipping(false);
+    }
   };
 
   // Capture sequence: capture current camera first, then switch and capture other
@@ -261,14 +300,26 @@ export default function CreatePage() {
       {currentStep === 'preview' && (
         <div className="space-y-4">
           <div className="relative">
-            <div className="relative w-full flex justify-center items-center">
-              <video
-              ref={videoRef}
-              className="border-2 border-gray-300 rounded-lg aspect-auto max-h-[60vh] w-auto"
-              playsInline
-              muted
-              autoPlay
-              style={{ maxWidth: "100%" }}
+            <div
+              className="relative w-full flex justify-center items-center bg-black/50 rounded-lg"
+              style={{
+                perspective: '1200px',
+                minHeight: lastVideoHeight,
+                transition: 'min-height 0.25s ease'
+              }}
+            >
+              <motion.video
+                ref={videoRef}
+                className="border-2 border-gray-300 rounded-lg aspect-auto max-h-[60vh] w-auto will-change-transform"
+                playsInline
+                muted
+                autoPlay
+                initial={{ rotateY: 0, scaleX: 1 }}
+                animate={flipControls}
+                style={{
+                  maxWidth: "100%",
+                  backfaceVisibility: 'hidden'
+                }}
               />
 
               {/* Overlay Buttons */}
@@ -291,7 +342,7 @@ export default function CreatePage() {
                   <button
                     type="button"
                     onClick={switchCamera}
-                    disabled={!isCameraSupported || isCapturing}
+                    disabled={!isCameraSupported || isCapturing || isFlipping}
                     className="w-10 h-10 bg-black opacity-60 hover:opacity-80 disabled:bg-opacity-30 disabled:cursor-not-allowed text-white rounded-full cursor-pointer transition-all flex items-center justify-center font-bold text-lg"
                     title="Kamera wechseln"
                   >
