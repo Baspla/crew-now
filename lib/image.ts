@@ -18,21 +18,21 @@ export async function ensureUploadsDir() {
 
 export async function processAndSave(
   dataUrl: string,
-  maxW = 1080,
-  maxH = 1080,
+  maxW = 1500,
+  maxH = 2000,
   minW = 280,
   minH = 280
 ) {
   const buf = dataUrlToBuffer(dataUrl);
   if (!buf) throw new Error("Invalid image data URL");
-
-  const maxBytes = 10 * 1024 * 1024; // 10 MB
+  
+  const maxBytes = 15 * 1024 * 1024;
   if (buf.length > maxBytes) {
-    throw new Error("Uploaded image exceeds maximum allowed size of 10MB");
+    throw new Error("Uploaded image exceeds maximum allowed size of 15MB");
   }
 
   const uploadsDir = await ensureUploadsDir();
-  const filename = `${crypto.randomUUID()}.jpg`;
+  const filename = `${crypto.randomUUID()}.webp`;
   const outPath = path.join(uploadsDir, filename);
 
   // Read metadata to determine original size
@@ -54,7 +54,7 @@ export async function processAndSave(
 
   await image
     .resize(targetW, targetH, { fit: "cover", position: "centre" })
-    .jpeg({ quality: 82 })
+    .webp({ quality: 85 }) // Use WebP for better compression
     .toFile(outPath);
 
   return `/uploads/posts/${filename}`;

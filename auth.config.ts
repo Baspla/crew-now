@@ -15,7 +15,7 @@ export const authConfig: NextAuthConfig = {
       clientSecret: process.env.OIDC_CLIENT_SECRET,
       authorization: {
         params: {
-          scope: "openid profile"
+          scope: "openid profile email"
         }
       },
       profile(profile: Profile) {
