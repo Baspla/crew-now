@@ -22,7 +22,9 @@ export const authConfig: NextAuthConfig = {
         return {
           id: profile.sub!,
           name: profile.display_name as string || profile.preferred_username || profile.name,
-          image: profile.picture
+          image: profile.picture,
+          email: profile.email as string,
+          emailVerified: profile.email_verified as boolean | null,
         }
       }
     }
