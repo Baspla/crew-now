@@ -1,7 +1,7 @@
 "use client";
 
 import PostImage from "@/components/post/PostImage";
-import { FormEvent } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 interface Props {
   backCameraImage: string;
@@ -22,10 +22,23 @@ export default function CapturedPreview({
   retake,
   postsRemaining,
 }: Props) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Erzeuge eine stabile UUID für diesen Captured-Durchlauf
+  const postId = useMemo(() => crypto.randomUUID(), []);
   const handleForm = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    await onSubmit(fd);
+    // Füge die Idempotenz-ID hinzu
+    fd.set("postId", postId);
+    try {
+      setIsSubmitting(true);
+      await onSubmit(fd);
+    } catch (err) {
+      // Bei Fehlern UI wieder entsperren
+      setIsSubmitting(false);
+      // Optional: Fehlerbehandlung/Toast könnte hier erfolgen
+      throw err;
+    }
   };
   return (
     <div className="space-y-6">
@@ -57,12 +70,13 @@ export default function CapturedPreview({
           <input type="hidden" name="imageUrl" value={backCameraImage} />
             {frontCameraImage && <input type="hidden" name="frontImageUrl" value={frontCameraImage} />}
           <input type="hidden" name="caption" value={captionText} />
+          <input type="hidden" name="postId" value={postId} />
           <button
             type="submit"
             className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white border-0 rounded-lg cursor-pointer text-base transition-colors font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={postsRemaining !== null && postsRemaining <= 0}
+            disabled={(postsRemaining !== null && postsRemaining <= 0) || isSubmitting}
           >
-            Post senden
+            {isSubmitting ? "Senden..." : "Post senden"}
           </button>
         </form>
         <button

@@ -101,8 +101,8 @@ export default function ReactionsPage() {
 			const constraints: MediaStreamConstraints = {
 				video: {
 					facingMode: "user",
-					width: { ideal: 480 },
-					height: { ideal: 480 },
+					width: { ideal: 1080 },
+					height: { ideal: 1080 },
 				},
 				audio: false,
 			};

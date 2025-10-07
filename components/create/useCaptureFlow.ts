@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type CaptureStep = "inactive" | "preview" | "captured" | "error";
 export type CameraType = "environment" | "user";
+export type MirrorContext = "preview" | "capture";
 
 interface PostingStatusResponse {
   postsRemaining?: number;
@@ -38,6 +39,13 @@ export function useCaptureFlow() {
   const streamRef = useRef<MediaStream | null>(null);
   const flipControls = useAnimationControls();
 
+  // --- Spiegelungs-Regel ----------------------------------------------------
+  // Entscheidet an einer bestimmten Code-Stelle (Kontext), ob für Kamera X gespiegelt werden soll.
+  // Derzeit gilt: Nur die User-/Front-Kamera wird gespiegelt – im Preview und beim Capture.
+  const shouldMirrorAt = useCallback((cameraType: CameraType, _where: MirrorContext) => {
+    return cameraType === "user";
+  }, []);
+
   // --- Kamera Utility ------------------------------------------------------
   const checkCameraSupport = useCallback(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -62,11 +70,13 @@ export function useCaptureFlow() {
       try {
         setError(null);
         stopStream();
+        // Halte den aktuellen Kamera-Typ synchron zum tatsächlich gestarteten Stream
+        setCurrentCamera(facingMode);
         const constraints: MediaStreamConstraints = {
           video: {
             facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1080 },
+            height: { ideal: 1080 },
           },
           audio: false,
         };
@@ -75,6 +85,8 @@ export function useCaptureFlow() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
+          // Spiegele die Vorschau unmittelbar passend zum aktiven Kamera-Typ
+          await flipControls.set({ scaleX: shouldMirrorAt(facingMode, "preview") ? -1 : 1 });
           const tryUpdateHeight = () => {
             const vh = videoRef.current?.videoHeight || 0;
             if (vh > 0) {
@@ -99,7 +111,7 @@ export function useCaptureFlow() {
     [checkCameraSupport, stopStream]
   );
 
-  const captureImageFromVideo = useCallback((): string | null => {
+  const captureImageFromVideo = useCallback((cameraType: CameraType, where: MirrorContext): string | null => {
     if (!videoRef.current || !canvasRef.current) {
       setError("Kamera oder Canvas nicht verfügbar");
       return null;
@@ -113,7 +125,7 @@ export function useCaptureFlow() {
     }
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    if (currentCamera === "user") {
+    if (shouldMirrorAt(cameraType, where)) {
       ctx.save();
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
@@ -123,7 +135,7 @@ export function useCaptureFlow() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     }
     return canvas.toDataURL("image/jpeg", 0.8);
-  }, [currentCamera]);
+  }, [shouldMirrorAt]);
 
   const scrollPreviewIntoView = useCallback(() => {
     if (videoRef.current) {
@@ -139,29 +151,29 @@ export function useCaptureFlow() {
       const newCamera = currentCamera === "environment" ? "user" : "environment";
       setCurrentCamera(newCamera);
       await startCamera(newCamera);
-      await flipControls.set({ scaleX: newCamera === "user" ? -1 : 1 });
+      await flipControls.set({ scaleX: shouldMirrorAt(newCamera, "preview") ? -1 : 1 });
       await flipControls.start({ rotateY: 0, transition: { duration: 0.25, ease: "easeOut" } });
       setTimeout(scrollPreviewIntoView, 50);
     } finally {
       setIsFlipping(false);
     }
-  }, [currentCamera, flipControls, isFlipping, scrollPreviewIntoView, startCamera]);
+  }, [currentCamera, flipControls, isFlipping, scrollPreviewIntoView, startCamera, shouldMirrorAt]);
 
   const startCaptureSequence = useCallback(async () => {
     setIsCapturing(true);
     setError(null);
     try {
-      const firstImage = captureImageFromVideo();
+      const firstCameraType = currentCamera;
+      const firstImage = captureImageFromVideo(firstCameraType, "capture");
       if (!firstImage) {
         setError("Fehler beim Aufnehmen des ersten Bildes");
         setIsCapturing(false);
         return;
       }
-      const firstCameraType = currentCamera;
-      const otherCamera = currentCamera === "environment" ? "user" : "environment";
+      const otherCamera = firstCameraType === "environment" ? "user" : "environment";
       await startCamera(otherCamera);
       setTimeout(() => {
-        const secondImage = captureImageFromVideo();
+        const secondImage = captureImageFromVideo(otherCamera, "capture");
         if (!secondImage) {
           setError("Fehler beim Aufnehmen des zweiten Bildes");
           setIsCapturing(false);
@@ -237,6 +249,7 @@ export function useCaptureFlow() {
     canvasRef,
     flipControls,
     // Actions
+    shouldMirrorAt,
     setCaptionText,
     setCurrentStep,
     switchCamera,

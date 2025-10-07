@@ -5,8 +5,10 @@ import { db, posts } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import { processAndSave } from "@/lib/image";
 import { postsRemainingForUser } from "@/lib/postingRules";
+import { eq } from "drizzle-orm";
 
 export async function createPost(formData: FormData) {
+    const providedPostId = formData.get("postId") as string | null;
     const imageUrl = formData.get("imageUrl") as string | null;
     const frontImageUrl = formData.get("frontImageUrl") as string | null;
     const caption = (formData.get("caption") as string | null) || null;
@@ -41,12 +43,43 @@ export async function createPost(formData: FormData) {
         savedFrontImageUrl = await processAndSave(frontImageUrl);
     }
 
-    const newPost = await db.insert(posts).values({
-        imageUrl: savedImageUrl,
-        frontImageUrl: savedFrontImageUrl,
-        caption: caption,
-        userId: userId,
-    }).returning();
+    // Wähle die zu verwendende Post-ID (Client kann liefern, sonst neu erzeugen)
+    const postId = providedPostId ?? crypto.randomUUID();
 
-    redirect(`/posts/${newPost[0].id}`);
+    try {
+        // Insert mit expliziter ID; PK verhindert Doppelanlage bei Retry/Duplikat
+        const newPost = await db
+            .insert(posts)
+            .values({
+                id: postId,
+                imageUrl: savedImageUrl,
+                frontImageUrl: savedFrontImageUrl,
+                caption: caption,
+                userId: userId,
+            })
+            .returning();
+
+        redirect(`/posts/${newPost[0].id}`);
+    } catch (err: unknown) {
+        const isUnique = err instanceof Error && /UNIQUE|PRIMARY KEY/i.test(err.message);
+        if (isUnique) {
+            // Bereits vorhanden – prüfe optional, ob der Post dem Nutzer gehört
+            const existing = await db
+                .select()
+                .from(posts)
+                .where(eq(posts.id, postId))
+                .all();
+            const found = existing?.[0];
+            if (found) {
+                // Optionaler Guard: Nur redirecten, wenn derselbe Nutzer
+                if (found.userId !== userId) {
+                    throw new Error("Konflikt: Post-ID bereits vergeben.");
+                }
+                redirect(`/posts/${postId}`);
+            }
+            // Falls nicht gefunden, gib generischen Fehler aus
+            throw new Error("Der Post existiert bereits.");
+        }
+        throw err;
+    }
 }
