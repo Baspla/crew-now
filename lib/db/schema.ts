@@ -27,6 +27,15 @@ if (!dbExists) {
 const sqlite = new Database(dbPath, { readonly: false, fileMustExist: false });
 export const db = drizzle({ client: sqlite, logger: logEnabled ? true : false });
 
+// Apply pending migrations on startup (idempotent). Disable by setting DB_MIGRATE=false
+if (process.env.DB_MIGRATE !== 'false') {
+  try {
+    migrate(db, { migrationsFolder: './drizzle' });
+  } catch (err) {
+    console.error('Migration error (continuing):', (err as Error).message);
+  }
+}
+
 export const users = sqliteTable("users", {
   id: text("id")
     .primaryKey()
@@ -145,6 +154,22 @@ export const reactions = sqliteTable("reactions", {
     .$defaultFn(() => new Date()),
 })
 
+// User settings: per-user preferences such as notification levels
+export const userSettings = sqliteTable("user_settings", {
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" })
+    .unique(),
+  // 0..3: 0=nichts, 1=tägliche Postzeit, 2=+andere haben gepostet, 3=+alle Aktivitäten
+  emailNotificationsLevel: integer("email_notifications_level").notNull().default(0),
+  creationDate: integer("creation_date", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedDate: integer("updated_date", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
+
 export type User = typeof users.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
@@ -153,3 +178,4 @@ export type Moment = typeof moment.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type UserReaction = typeof userReactions.$inferSelect;
 export type Reaction = typeof reactions.$inferSelect;
+export type UserSettings = typeof userSettings.$inferSelect;

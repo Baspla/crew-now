@@ -34,9 +34,9 @@ export default function Navigation() {
           >
             Profil
           </Link>
-          <SignOutButton
-            className="flex-1 text-center text-xs font-medium text-gray-700 dark:text-gray-300 px-2 py-2 rounded-md hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          />
+          <Link href="/settings" className="flex-1 text-center text-xs font-medium text-gray-700 dark:text-gray-300 px-2 py-2 rounded-md hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
+            Einstellungen
+          </Link>
         </nav>
       </div>
 
@@ -73,6 +73,12 @@ export default function Navigation() {
             className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 md:px-3 md:py-2 md:rounded-md md:hover:bg-gray-100 md:dark:hover:bg-zinc-800"
           >
             Profil
+          </Link>
+          <Link
+            href="/settings"
+            className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 md:px-3 md:py-2 md:rounded-md md:hover:bg-gray-100 md:dark:hover:bg-zinc-800"
+          >
+            Einstellungen
           </Link>
 
           <div className="flex-1 border-b border-gray-200 dark:border-gray-700" />

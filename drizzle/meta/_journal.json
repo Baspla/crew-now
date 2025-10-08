@@ -36,6 +36,13 @@
       "when": 1758515069832,
       "tag": "0004_glossy_quasar",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1759885636948,
+      "tag": "0005_loose_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }
