@@ -35,15 +35,63 @@ export async function GET(request: Request) {
 }
 
 async function createNewMoment(forced: boolean) {
-    const now = Date.now();
-    const startOfDay = new Date();
-    startOfDay.setHours(8, 0, 0, 0); // Starting time of day
-    const endOfDay = new Date();
-    endOfDay.setHours(20, 0, 0, 0); // Ending time of day
+    // Always compute using Europe/Berlin timezone, regardless of container's local (UTC)
+    const TZ = 'Europe/Berlin';
 
-    // Check if current time is between starting time of day and ending time of day
+    // Helpers for timezone-safe calculations
+    const dtf = new Intl.DateTimeFormat('en-GB', {
+        timeZone: TZ,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+    });
+
+    const getParts = (d: Date) => {
+        const parts = dtf.formatToParts(d);
+        const map: Record<string, number> = {};
+        for (const p of parts) {
+            if (p.type !== 'literal') map[p.type] = parseInt(p.value, 10);
+        }
+        return {
+            year: map.year,
+            month: map.month,
+            day: map.day,
+            hour: map.hour,
+            minute: map.minute,
+            second: map.second,
+        } as const;
+    };
+
+    // Offset of TZ relative to UTC at given instant (ms)
+    const getTzOffsetMs = (d: Date) => {
+        const p = getParts(d);
+        const asUTC = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+        return asUTC - d.getTime();
+    };
+
+    // Convert a local wall time in TZ to an actual UTC instant
+    const zonedTimeToUtc = (y: number, m: number, d: number, h = 0, mi = 0, s = 0) => {
+        const candidate = new Date(Date.UTC(y, m - 1, d, h, mi, s));
+        const offset = getTzOffsetMs(candidate);
+        return new Date(candidate.getTime() - offset);
+    };
+
+    const nowDate = new Date(); // actual current UTC instant
+    const now = nowDate.getTime();
+    const todayParts = getParts(nowDate);
+    const startOfDay = zonedTimeToUtc(todayParts.year, todayParts.month, todayParts.day, 8, 0, 0); // 08:00 Berlin
+    const endOfDay = zonedTimeToUtc(todayParts.year, todayParts.month, todayParts.day, 20, 0, 0); // 20:00 Berlin
+
+    // Check if current time is between starting time of day and ending time of day (in Berlin time)
     if ((now < startOfDay.getTime() || now > endOfDay.getTime()) && !forced) {
-        console.log('Current time is outside the allowed time range.');
+        const humanNow = nowDate.toLocaleString('de-DE', { timeZone: TZ });
+        const humanStart = startOfDay.toLocaleString('de-DE', { timeZone: TZ });
+        const humanEnd = endOfDay.toLocaleString('de-DE', { timeZone: TZ });
+        console.log(`Current time (${humanNow} ${TZ}) is outside the allowed time range ${humanStart} - ${humanEnd}.`);
         return;
     }
 
@@ -53,20 +101,19 @@ async function createNewMoment(forced: boolean) {
     // Check if a moment was already created today
     if (lastMoment.length > 0 && !forced) {
         const last = lastMoment[0];
-        const lastMomentDate = new Date(last.startDate);
-        const today = new Date();
+        const lastParts = getParts(new Date(last.startDate));
         if (
-            lastMomentDate.getFullYear() === today.getFullYear() &&
-            lastMomentDate.getMonth() === today.getMonth() &&
-            lastMomentDate.getDate() === today.getDate()
+            lastParts.year === todayParts.year &&
+            lastParts.month === todayParts.month &&
+            lastParts.day === todayParts.day
         ) {
-            console.log('A moment was already created today.');
+            console.log('A moment was already created today (Europe/Berlin day).');
             return;
         }
     }
 
     // Calculate hash for today's time
-    const hashInput = `${new Date().toDateString()}`;
+    const hashInput = `${nowDate.toDateString()}@${TZ}`;
     const hash = createHash('md5').update(hashInput).digest('hex');
     const numericHash = parseInt(hash.slice(0, 8), 16); // Use first 8 characters of hash
     const hashRange = endOfDay.getTime() - startOfDay.getTime();
@@ -74,7 +121,8 @@ async function createNewMoment(forced: boolean) {
 
     // Check if the hash for today's time is in the future
     if (hashTime > now && !forced) {
-        console.log('Hash for today\'s time is in the future. (It will be at', new Date(hashTime).toISOString() + ')');
+        const humanHash = new Date(hashTime).toLocaleString('de-DE', { timeZone: TZ });
+        console.log('Hash for today\'s time is in the future. (It will be at', humanHash, TZ + ')');
         return;
     }
 
@@ -82,12 +130,12 @@ async function createNewMoment(forced: boolean) {
     if (lastMoment.length > 0) {
         const last = lastMoment[0];
         await db.update(moment).set({ endDate: new Date(now) }).where(eq(moment.id, last.id));
-        console.log('Ended previous moment', last.id, 'at', new Date(now).toISOString());
+        console.log('Ended previous moment', last.id, 'at', new Date(now).toLocaleString('de-DE', { timeZone: TZ }), TZ);
     }
 
     // Create a new moment starting now
     await db.insert(moment).values({ startDate: new Date(now), endDate: null });
-    console.log('New moment created at', new Date(now).toISOString());
+    console.log('New moment created at', new Date(now).toLocaleString('de-DE', { timeZone: TZ }), TZ);
 
     // send notification emails for level 1 (trigger)
     try {
