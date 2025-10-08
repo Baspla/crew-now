@@ -80,7 +80,7 @@ export default function Post({ post, link, userName, userImage }: PostProps) {
                         </>
                     )}
                 </AnimatePresence>
-                <ReactionPicker reactionPickerOpen={reactionPickerOpen} onClose={() => setReactionPickerOpen(false)} />
+                <ReactionPicker reactionPickerOpen={reactionPickerOpen} onClose={() => setReactionPickerOpen(false)} onClick={(reactionId) => console.log(`Selected reaction ${reactionId} for post ${post.id}`)} />
             </PostImage>
             {post.caption && (
             <Caption caption={post.caption} />

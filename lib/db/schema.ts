@@ -146,6 +146,9 @@ export const reactions = sqliteTable("reactions", {
   postId: text("post_id")
     .notNull()
     .references(() => posts.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   reactionId: text("reaction_id")
     .notNull()
     .references(() => userReactions.id, { onDelete: "cascade" }),

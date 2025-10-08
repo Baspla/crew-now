@@ -1,0 +1,1 @@
+ALTER TABLE `reactions` ADD `user_id` text NOT NULL REFERENCES users(id);

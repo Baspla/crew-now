@@ -10,7 +10,7 @@ interface ReactionBubbleProps {
     size?: Size;
     number?: number;
     interactive?: boolean;
-    onClick?: () => void;
+    onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 const sizeClasses = {

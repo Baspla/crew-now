@@ -5,9 +5,11 @@ import React from "react";
 import type { UserReaction } from "@/lib/db/schema";
 import { reactionEmojis } from "@/lib/reactions";
 import { getUserReactions } from "@/app/(logged in)/reactions/actions";
+import { useRouter } from "next/navigation";
 
-export default function ReactionPicker({ onClose, reactionPickerOpen }: { onClose?: () => void, reactionPickerOpen: boolean }) {
+export default function ReactionPicker({ onClose, reactionPickerOpen, onClick }: { onClose?: () => void, reactionPickerOpen: boolean, onClick: (reactionId: string) => void }) {
     const [userReactions, setUserReactions] = React.useState<UserReaction[]>([]);
+    const router = useRouter();
 
     React.useEffect(() => {
         (async () => {
@@ -57,6 +59,10 @@ export default function ReactionPicker({ onClose, reactionPickerOpen }: { onClos
                                         imageUrl={imageUrl}
                                         selected={undefined}
                                         size="lg"
+                                        onClick={(e) => {
+                                            if (r && r.id) onClick(r.id);
+                                            else router.push('/reactions');
+                                        }}
                                         interactive
                                     />
                                 </motion.button>

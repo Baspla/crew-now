@@ -43,6 +43,13 @@
       "when": 1759885636948,
       "tag": "0005_loose_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1759920047906,
+      "tag": "0006_flaky_wild_child",
+      "breakpoints": true
     }
   ]
 }
