@@ -9,6 +9,11 @@ const nextConfig = {
     // TypeScript-Fehler ignorieren, aber den Build fortsetzen
     ignoreBuildErrors: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    }
+  }
 }
 
 module.exports = nextConfig;
