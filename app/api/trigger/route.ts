@@ -2,6 +2,7 @@ import { db, moment } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createHash } from 'crypto';
+import { notifyAllEligibleByLevel } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic'
 
@@ -87,6 +88,13 @@ async function createNewMoment(forced: boolean) {
     // Create a new moment starting now
     await db.insert(moment).values({ startDate: new Date(now), endDate: null });
     console.log('New moment created at', new Date(now).toISOString());
+
+    // send notification emails for level 1 (trigger)
+    try {
+        await notifyAllEligibleByLevel(1, { type: 'moment', startDate: new Date(now) })
+    } catch (e) {
+        console.error('Failed to send level-1 notifications', e)
+    }
 
     // Send discord Webhook notification (if configured)
     const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
