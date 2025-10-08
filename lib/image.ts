@@ -40,6 +40,8 @@ export async function processAndSave(
   const meta = await image.metadata();
   if (!meta.width || !meta.height) throw new Error("Unable to read image dimensions");
 
+  console.log(`Original image size: ${meta.width}x${meta.height}`);
+
   let targetW = meta.width;
   let targetH = meta.height;
 
@@ -56,6 +58,8 @@ export async function processAndSave(
     .resize(targetW, targetH, { fit: "cover", position: "centre" })
     .webp({ quality: 85 }) // Use WebP for better compression
     .toFile(outPath);
+
+  console.log(`Processed image saved as ${filename} with size ${targetW}x${targetH}`);
 
   return `/uploads/posts/${filename}`;
 }

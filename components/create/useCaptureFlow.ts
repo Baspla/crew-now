@@ -74,9 +74,9 @@ export function useCaptureFlow() {
         setCurrentCamera(facingMode);
         const constraints: MediaStreamConstraints = {
           video: {
-            facingMode/*,
-            width: { ideal: 1500 },
-            height: { ideal: 2000 },*/
+            facingMode,
+            width: { min: 1000 },
+            height: { min: 1500 },
           },
           audio: false,
         };

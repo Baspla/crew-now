@@ -100,9 +100,11 @@ export default function ReactionsPage() {
 
 			const constraints: MediaStreamConstraints = {
 				video: {
-					facingMode: "user",/*
-					width: { ideal: 1500 },
-					height: { ideal: 2000 },*/
+					facingMode: "user",
+					// Aspect ratio auf 1:1 setzen, damit der Kreis immer passt
+					aspectRatio: 1,
+					width: { min: 720, ideal: 1500, max: 1920 },
+					height: { min: 720, ideal: 1500, max: 1920 },
 				},
 				audio: false,
 			};
