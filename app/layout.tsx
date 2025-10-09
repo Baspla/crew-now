@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 // @ts-ignore: allow side-effect global CSS import in Next.js layout
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { TRPCReactProvider } from "@/trpc/client";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-        {children}
+        <TRPCReactProvider>
+          {children}
+        </TRPCReactProvider>
         </ThemeProvider>
       </body>
     </html>

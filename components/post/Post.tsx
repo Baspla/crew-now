@@ -9,6 +9,9 @@ import ReactionList from "@/components/post/reactions/ReactionList";
 import ReactionPicker from "@/components/post/reactions/ReactionPicker";
 import { AnimatePresence, motion } from "motion/react";
 import Caption from "./Caption";
+import { useMutation } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
+import { useRouter } from "next/navigation";
 
 interface PostProps {
     post: PostWithReactions;
@@ -28,6 +31,10 @@ export type PostWithReactions = Post & {
 
 export default function Post({ post, link, userName, userImage }: PostProps) {
     const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
+    const trpc = useTRPC();
+    const router = useRouter();
+
+    const addReaction = useMutation(trpc.reactions.addToPost.mutationOptions());
 
     useEffect(() => {
         console.log(reactionPickerOpen);
@@ -80,7 +87,25 @@ export default function Post({ post, link, userName, userImage }: PostProps) {
                         </>
                     )}
                 </AnimatePresence>
-                <ReactionPicker reactionPickerOpen={reactionPickerOpen} onClose={() => setReactionPickerOpen(false)} onClick={(reactionId) => console.log(`Selected reaction ${reactionId} for post ${post.id}`)} />
+                <ReactionPicker
+                    reactionPickerOpen={reactionPickerOpen}
+                    onClose={() => setReactionPickerOpen(false)}
+                    onClick={(reactionId) => {
+                        addReaction.mutate(
+                            { postId: post.id, reactionId },
+                            {
+                                onSuccess: () => {
+                                    // UI aktualisieren – Page neu validieren
+                                    router.refresh();
+                                    setReactionPickerOpen(false);
+                                },
+                                onError: (e) => {
+                                    console.error('Failed to add reaction', e);
+                                },
+                            },
+                        );
+                    }}
+                />
             </PostImage>
             {post.caption && (
             <Caption caption={post.caption} />
