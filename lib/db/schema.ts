@@ -139,23 +139,30 @@ export const userReactions = sqliteTable(
   ]
 )
 
-export const reactions = sqliteTable("reactions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  postId: text("post_id")
-    .notNull()
-    .references(() => posts.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  reactionId: text("reaction_id")
-    .notNull()
-    .references(() => userReactions.id, { onDelete: "cascade" }),
-  creationDate: integer("creation_date", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-})
+export const reactions = sqliteTable(
+  "reactions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reactionId: text("reaction_id")
+      .notNull()
+      .references(() => userReactions.id, { onDelete: "cascade" }),
+    creationDate: integer("creation_date", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (reactions) => [
+    // Maximal eine Reaktion pro Nutzer und Post
+    unique().on(reactions.userId, reactions.postId),
+  ]
+)
 
 // User settings: per-user preferences such as notification levels
 export const userSettings = sqliteTable("user_settings", {

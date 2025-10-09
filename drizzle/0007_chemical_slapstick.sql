@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `reactions_user_id_post_id_unique` ON `reactions` (`user_id`,`post_id`);

@@ -1,8 +1,8 @@
 import { router } from '../init';
-import { helloRouter } from './hello';
+import { reactionsRouter } from './reactions';
 
 export const appRouter = router({
-  hello: helloRouter,
+  reactions: reactionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

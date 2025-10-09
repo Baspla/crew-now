@@ -14,7 +14,6 @@ type Props = {
 };
 
 export default function ReactionList({ reactions, maxVisible = 3 }: Props) {
-    const [selected, setSelected] = React.useState<number | string | null>(null);
 
     if (!reactions || reactions.length === 0) {
         return null;
@@ -30,7 +29,7 @@ export default function ReactionList({ reactions, maxVisible = 3 }: Props) {
                     key={reaction.id}
                     emoji={reaction.emoji ?? ""}
                     imageUrl={reaction.imageUrl}
-                    selected={typeof selected === "number" || typeof selected === "string" ? reaction.id === selected : undefined}
+                    selected={undefined}
                 />
             ))}
             {extra > 0 && (
