@@ -5,25 +5,17 @@ import ReactionBubble from "./ReactionBubble";
 import Link from "next/link";
 import type { UserReaction } from "@/lib/db/schema";
 import { reactionEmojis } from "@/lib/reactions";
-import { getUserReactions } from "@/app/(logged in)/reactions/actions";
+import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface ReactionEditorProps {
     className?: string;
 }
 
 export default function ReactionEditor({ className = "" }: ReactionEditorProps) {
-    const [userReactions, setUserReactions] = React.useState<UserReaction[]>([]);
-
-    React.useEffect(() => {
-        (async () => {
-            try {
-                const reactions = await getUserReactions();
-                setUserReactions(Array.isArray(reactions) ? reactions : []);
-            } catch {
-                setUserReactions([]);
-            }
-        })();
-    }, []);
+    const trpc = useTRPC();
+    const listQuery = useQuery(trpc.userReactions.listMine.queryOptions());
+    const userReactions: UserReaction[] = listQuery.data ?? [];
 
     const lastReactionByEmoji = React.useMemo(() => {
         const map = new Map<string, UserReaction>();

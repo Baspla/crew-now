@@ -8,6 +8,7 @@ import UserLink from "@/components/post/UserLink";
 import PageHead from "@/components/layout/PageHead";
 import Post from "@/components/post/Post";
 import { getUserPosts } from "@/lib/feed";
+import ProfileSection from "@/components/profile/ProfileSection";
 
 export const dynamic = 'force-dynamic'
 
@@ -40,35 +41,18 @@ export default async function ProfilePage({ params }: PageProps) {
     <main>
       <PageHead title={user.name + "'s Profil"} backUrl="/feed" subtitle="Peak content coming up!" />
 
-      <div>
-        <div className="flex flex-row gap-4 mb-4">
-          <ProfilePicture
-            src={user.image || undefined}
-            alt="User Avatar"
-            size="lg"
-          />
-          <div>
-            <h1 className="text-2xl font-bold"
-            >{user.name}</h1>
-            <div>
-              <div>
-                <strong>Streak:</strong> {user.streakLength} Tage
-              </div>
-              <div>
-                <strong>Mitglied seit:</strong> {user.creationDate.toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-        </div>
+      <ProfileSection
+        name={user.name}
+        image={user.image}
+        totalPosts={userPosts.length}
+        streakLength={user.streakLength}
+      />
 
-
-      </div>
-
-      <h2 className="text-lg font-bold mt-8 mb-4">Posts von {user.name || "diesem Benutzer"}
+      <h2 className="text-lg font-bold mt-4 mb-4">Posts von {user.name || "diesem Benutzer"}
         <span className="text-md font-bold text-gray-500 ml-2">{userPosts.length}</span>
       </h2>
 
-      <div className="space-y-6">
+      <div className="space-y-6 px-4">
         {userPosts.length === 0 ? (
           <p>Noch keine Posts vorhanden.</p>
         ) : (

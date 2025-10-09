@@ -2,13 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import PageHead from "@/components/layout/PageHead";
-import { createReaction, getUserReactions } from "./actions";
+import { useTRPC } from "@/trpc/client";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import ReactionBubble from "@/components/post/reactions/ReactionBubble";
 import { motion } from "motion/react";
 import type { UserReaction } from "@/lib/db/schema";
 import { reactionEmojis } from "@/lib/reactions";
 
 export default function ReactionsPage() {
+	const trpc = useTRPC();
+	const listQuery = useQuery(trpc.userReactions.listMine.queryOptions());
+	const uploadMutation = useMutation(trpc.userReactions.upload.mutationOptions());
 	// Schritte: Emoji wählen -> Vorschau -> aufgenommen -> Fehler
 	const [currentStep, setCurrentStep] = useState<"choose-emoji" | "preview" | "captured" | "error">("choose-emoji");
 
@@ -38,17 +42,9 @@ export default function ReactionsPage() {
 
 	// Bisherige Reaktionen des Nutzers
 	const [userReactions, setUserReactions] = useState<UserReaction[]>([]);
-
 	useEffect(() => {
-		(async () => {
-			try {
-				const reactions = await getUserReactions();
-				setUserReactions(Array.isArray(reactions) ? reactions : []);
-			} catch {
-				setUserReactions([]);
-			}
-		})();
-	}, []);
+		if (listQuery.data) setUserReactions(listQuery.data);
+	}, [listQuery.data]);
 
 	// Mappe die letzten Nutzer-Reaktionen je Emoji für Anreicherung
 	const lastReactionByEmoji = useMemo(() => {
@@ -222,18 +218,16 @@ export default function ReactionsPage() {
 
 		const handleSubmit = async () => {
 			if (!imageDataUrl || !emoji) return;
-		const formData = new FormData();
-		const file = await dataUrlToFile(imageDataUrl, "reaction.jpg");
-		formData.set("image", file);
-		formData.set("emoji", emoji);
-		const res = await createReaction(formData);
-		if (!res.success) {
-			setError(res.error || "Unbekannter Fehler beim Speichern");
-			setCurrentStep("error");
-			return;
-		}
-		// Optional: Weiterleitung oder Hinweis – für jetzt zurück zum Feed
-		window.location.href = "/reactions";
+			try {
+				const res = await uploadMutation.mutateAsync({ imageDataUrl, emoji });
+				// Optional: refresh list and go back to list
+				await listQuery.refetch();
+				window.location.href = "/reactions";
+			} catch (e: any) {
+				const msg = e?.message || "Unbekannter Fehler beim Speichern";
+				setError(msg);
+				setCurrentStep("error");
+			}
 	};
 
 	return (

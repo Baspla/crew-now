@@ -1,9 +1,12 @@
 
 "use client"
-import { SettingsDTO, updateSettingsAction, sendTestEmailAction } from "@/app/(logged in)/settings/actions";
 import { useEffect, useRef, useState } from "react";
+import { useTRPC } from "@/trpc/client";
+import type { SettingsDTO } from "@/trpc/routers/settings";
+import { useMutation } from "@tanstack/react-query";
 
-export default function SettingsForm({ initial }: { initial: SettingsDTO | null }) {
+export default function SettingsForm({ initial }: { initial: SettingsDTO }) {
+    const trpc = useTRPC();
     const [emailNotifyDailyMoment, setEmailNotifyDailyMoment] = useState<boolean>(initial?.emailNotifyDailyMoment ?? false);
     const [emailNotifyNewPosts, setEmailNotifyNewPosts] = useState<boolean>(initial?.emailNotifyNewPosts ?? false);
     const [emailCommentScope, setEmailCommentScope] = useState<0 | 1 | 2 | 3>(initial?.emailCommentScope ?? 0);
@@ -12,6 +15,7 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO | null 
     const [dirty, setDirty] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const formRef = useRef<HTMLFormElement | null>(null);
+    const updateMutation = useMutation(trpc.settings.update.mutationOptions());
 
     useEffect(() => {
         setDirty(
@@ -36,10 +40,16 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO | null 
 
     // Also warn on route change via soft navigation (optional, left simple for now)
 
-    async function onSubmit(formData: FormData) {
+    async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
         try {
             setIsSaving(true);
-            await updateSettingsAction(formData);
+            await updateMutation.mutateAsync({
+                emailNotifyDailyMoment,
+                emailNotifyNewPosts,
+                emailCommentScope,
+                emailReactionScope,
+            });
             // On success, update the baseline and clear dirty state
             const newSaved: SettingsDTO = {
                 emailNotifyDailyMoment,
@@ -56,7 +66,13 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO | null 
     }
 
     return (
-        <form action={onSubmit} ref={formRef} className="space-y-6 max-w-2xl" aria-busy={isSaving}>
+        <form onSubmit={onSubmit} ref={formRef} className="space-y-6 max-w-2xl" aria-busy={isSaving}>
+
+            <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/30 p-3 sm:p-4 text-sm text-zinc-700 dark:text-zinc-300">
+                <h4 className="font-semibold mb-2">Wichtig</h4>
+                <p className="mb-1">Dein Profilbild, Namen und E-Mail kannst du in <a className="font-semibold text-indigo-800 dark:text-indigo-400" href={process.env.NEXT_PUBLIC_SSO_URL} target="_blank" rel="noopener noreferrer">GnagPlus</a> ändern.</p>
+                <p >Nach der Änderung musst du dich in Crew Now einmal aus- und wieder einloggen.</p>
+            </div>
             <section aria-labelledby="settings-notifications" className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/40 backdrop-blur p-4 sm:p-6">
                 <h2 id="settings-notifications-heading" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                     Benachrichtigungen
@@ -65,12 +81,6 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO | null 
                     <h3 id="settings-notifications-email" className="text-md font-semibold text-zinc-800 dark:text-zinc-200">
                         E-Mail Benachrichtigungen
                     </h3>
-
-                    <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/30 p-3 sm:p-4 text-sm text-zinc-700 dark:text-zinc-300">
-                        <h4 className="font-semibold mb-2">Wichtig</h4>
-                        <p className="mb-1">Deine E-Mail kannst du in <a className="font-semibold text-indigo-800 dark:text-indigo-400" href={process.env.NEXT_PUBLIC_SSO_URL} target="_blank" rel="noopener noreferrer">GnagPlus</a> ändern.</p>
-                        <p >Nach der Änderung musst du dich in Crew Now einmal aus- und wieder einloggen.</p>
-                    </div>
 
                     <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div>

@@ -1,14 +1,19 @@
 "use client";
 
-import { createPost } from "./actions";
 import PageHead from "@/components/layout/PageHead";
 import { useCaptureFlow } from "@/components/create/useCaptureFlow";
 import CameraPreview from "@/components/create/CameraPreview";
 import CapturedPreview from "@/components/create/CapturedPreview";
 import ErrorState from "@/components/create/ErrorState";
 import ActivateCameraStep from "@/components/create/ActivateCameraStep";
+import { useTRPC } from "@/trpc/client";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 export default function CreatePage() {
+  const trpc = useTRPC();
+  const router = useRouter();
+  const createMutation = useMutation(trpc.posts.create.mutationOptions());
   const {
     currentStep,
     backCameraImage,
@@ -38,7 +43,14 @@ export default function CreatePage() {
       setError('Du hast keine Posts mehr übrig.');
       return;
     }
-    await createPost(formData);
+    const input = {
+      postId: (formData.get("postId") as string) || undefined,
+      imageUrl: (formData.get("imageUrl") as string)!,
+      frontImageUrl: (formData.get("frontImageUrl") as string) || undefined,
+      caption: (formData.get("caption") as string) || undefined,
+    };
+    const res = await createMutation.mutateAsync(input);
+    router.replace(`/posts/${res.id}`);
   };
 
   return (

@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import PageHead from "@/components/layout/PageHead";
-import { getSettings, updateSettingsAction } from "./actions";
 import SettingsForm from "@/components/settings/SettingsForm";
 import SignOutButton from "@/components/layout/SignOutButton";
+import { caller } from "@/trpc/server";
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export default async function SettingsPage() {
         );
     }
 
-    const settings = await getSettings();
+    const settings = await caller.settings.get();
 
     return (
         <main className="min-h-screen">

@@ -4,23 +4,15 @@ import { AnimatePresence, motion } from "motion/react"
 import React from "react";
 import type { UserReaction } from "@/lib/db/schema";
 import { reactionEmojis } from "@/lib/reactions";
-import { getUserReactions } from "@/app/(logged in)/reactions/actions";
 import { useRouter } from "next/navigation";
+import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ReactionPicker({ onClose, reactionPickerOpen, onClick }: { onClose?: () => void, reactionPickerOpen: boolean, onClick: (reactionId: string) => void }) {
-    const [userReactions, setUserReactions] = React.useState<UserReaction[]>([]);
     const router = useRouter();
-
-    React.useEffect(() => {
-        (async () => {
-            try {
-                const reactions = await getUserReactions();
-                setUserReactions(Array.isArray(reactions) ? reactions : []);
-            } catch {
-                setUserReactions([]);
-            }
-        })();
-    }, []);
+    const trpc = useTRPC();
+    const listQuery = useQuery(trpc.userReactions.listMine.queryOptions());
+    const userReactions: UserReaction[] = listQuery.data ?? [];
 
     const lastReactionByEmoji = React.useMemo(() => {
         const map = new Map<string, UserReaction>();
