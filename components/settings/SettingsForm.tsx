@@ -1,6 +1,6 @@
 
 "use client"
-import { SettingsDTO, updateSettingsAction } from "@/app/(logged in)/settings/actions";
+import { SettingsDTO, updateSettingsAction, sendTestEmailAction } from "@/app/(logged in)/settings/actions";
 import { useEffect, useRef, useState } from "react";
 
 export default function SettingsForm({ initial }: { initial: SettingsDTO | null }) {
@@ -46,6 +46,7 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO | null 
                 emailNotifyNewPosts,
                 emailCommentScope,
                 emailReactionScope,
+                currentEmail: initial?.currentEmail ?? null,
             };
             setSaved(newSaved);
             setDirty(false);
@@ -64,6 +65,19 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO | null 
                     <h3 id="settings-notifications-email" className="text-md font-semibold text-zinc-800 dark:text-zinc-200">
                         E-Mail Benachrichtigungen
                     </h3>
+
+                    <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/30 p-3 sm:p-4 text-sm text-zinc-700 dark:text-zinc-300">
+                        <h4 className="font-semibold mb-2">Wichtig</h4>
+                        <p className="mb-1">Deine E-Mail kannst du in <a className="font-semibold text-indigo-800 dark:text-indigo-400" href={process.env.NEXT_PUBLIC_SSO_URL} target="_blank" rel="noopener noreferrer">GnagPlus</a> ändern.</p>
+                        <p >Nach der Änderung musst du dich in Crew Now einmal aus- und wieder einloggen.</p>
+                    </div>
+
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <span className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Aktuelle E-Mail</span>
+                            <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{initial?.currentEmail ?? '—'}</div>
+                        </div>
+                    </div>
 
                     <div className="space-y-3">
                         <label className="flex select-none items-center gap-3 text-zinc-800 dark:text-zinc-200">

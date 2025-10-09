@@ -1,14 +1,16 @@
 "use server"
 
 import { auth } from "@/auth"
-import { db, userSettings } from "@/lib/db/schema"
+import { db, userSettings, users } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
+import { sendEmail } from "@/lib/email"
 
 export type SettingsDTO = {
 	emailNotifyDailyMoment: boolean
 	emailNotifyNewPosts: boolean
 	emailCommentScope: 0 | 1 | 2 | 3
 	emailReactionScope: 0 | 1 | 2
+	currentEmail: string | null
 }
 
 export async function getSettings(): Promise<SettingsDTO | null> {
@@ -16,13 +18,16 @@ export async function getSettings(): Promise<SettingsDTO | null> {
 	const userId = session?.user?.id
 	if (!userId) return null
 
-	const rows = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1)
-	if (!rows[0]) {
+		const rows = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1)
+		const userRow = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1)
+		const currentEmail = userRow[0]?.email ?? null
+		if (!rows[0]) {
 		return {
 			emailNotifyDailyMoment: false,
 			emailNotifyNewPosts: false,
 			emailCommentScope: 0,
 			emailReactionScope: 0,
+				currentEmail,
 		}
 	}
 	const s = rows[0]
@@ -31,6 +36,7 @@ export async function getSettings(): Promise<SettingsDTO | null> {
 		emailNotifyNewPosts: !!s.emailNotifyNewPosts,
 		emailCommentScope: (s.emailCommentScope as 0 | 1 | 2 | 3) ?? 0,
 		emailReactionScope: (s.emailReactionScope as 0 | 1 | 2) ?? 0,
+			currentEmail,
 	}
 }
 
@@ -81,6 +87,6 @@ export async function updateSettings(data: SettingsDTO): Promise<{ ok: true } | 
 			emailNotifyNewPosts,
 			emailCommentScope: Number.isFinite(emailCommentScope) ? (emailCommentScope as 0 | 1 | 2 | 3) : 0,
 			emailReactionScope: Number.isFinite(emailReactionScope) ? (emailReactionScope as 0 | 1 | 2) : 0,
+				currentEmail: null,
 		})
 	}
-
