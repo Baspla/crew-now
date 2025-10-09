@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import PageHead from "@/components/layout/PageHead";
-import { NotificationSlider } from "@/components/settings/NotificationSlider";
 import { getSettings, updateSettingsAction } from "./actions";
 import SettingsForm from "@/components/settings/SettingsForm";
 import SignOutButton from "@/components/layout/SignOutButton";

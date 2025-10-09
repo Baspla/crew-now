@@ -165,13 +165,18 @@ export const reactions = sqliteTable(
 )
 
 // User settings: per-user preferences such as notification levels
+// Granulare Benachrichtigungseinstellungen (kein Level-System mehr)
+// emailCommentScope: 0=aus, 1=nur Kommentare auf deinen Posts, 2=auch unter Posts wo du kommentiert hast, 3=alle Kommentare
+// emailReactionScope: 0=aus, 1=Reaktionen auf deinen Post, 2=Reaktionen auf beliebige Posts
 export const userSettings = sqliteTable("user_settings", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" })
     .unique(),
-  // 0..3: 0=nichts, 1=tägliche Postzeit, 2=+andere haben gepostet, 3=+alle Aktivitäten
-  emailNotificationsLevel: integer("email_notifications_level").notNull().default(0),
+  emailNotifyDailyMoment: integer("email_notify_daily_moment").notNull().default(0),
+  emailNotifyNewPosts: integer("email_notify_new_posts").notNull().default(0),
+  emailCommentScope: integer("email_comment_scope").notNull().default(0),
+  emailReactionScope: integer("email_reaction_scope").notNull().default(0),
   creationDate: integer("creation_date", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -189,3 +194,7 @@ export type Comment = typeof comments.$inferSelect;
 export type UserReaction = typeof userReactions.$inferSelect;
 export type Reaction = typeof reactions.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
+
+// TS Hilfstypen für Scopes
+export type EmailCommentScope = 0 | 1 | 2 | 3;
+export type EmailReactionScope = 0 | 1 | 2;

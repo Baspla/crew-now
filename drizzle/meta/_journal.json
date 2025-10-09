@@ -57,6 +57,13 @@
       "when": 1760025985048,
       "tag": "0007_chemical_slapstick",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1760041858279,
+      "tag": "0008_sour_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }

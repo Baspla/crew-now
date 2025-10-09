@@ -1,8 +1,9 @@
 import { publicProcedure, protectedProcedure, router } from "../init";
 import { z } from "zod";
-import { db, comments, users } from "@/lib/db/schema";
+import { db, comments, users, posts } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { notifyCommentCreated } from '@/lib/notifications'
 
 export const commentsRouter = router({
   listByPost: publicProcedure
@@ -40,6 +41,10 @@ export const commentsRouter = router({
         .values({ postId: input.postId, userId, content: input.content })
         .returning();
 
+      // determine post author for scoping
+      const p = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, input.postId)).limit(1)
+      const postAuthorId = p[0]?.userId
+
       // join user data for immediate UI consumption
       const row = await db
         .select({
@@ -54,6 +59,16 @@ export const commentsRouter = router({
         .leftJoin(users, eq(comments.userId, users.id))
         .where(eq(comments.id, inserted[0].id))
         .limit(1);
+
+      // fire email notifications (safe-guarded)
+      if (postAuthorId) {
+        try {
+          const actorName = ctx.session?.user?.name ?? null
+          await notifyCommentCreated({ postId: input.postId, actorId: userId, actorName, postAuthorId })
+        } catch (e) {
+          console.error('Failed to send comment notifications', e)
+        }
+      }
 
       return row[0];
     }),

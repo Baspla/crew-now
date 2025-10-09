@@ -5,6 +5,7 @@ import { db, posts } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import { processAndSave } from "@/lib/image";
 import { postsRemainingForUser } from "@/lib/postingRules";
+import { notifyNewPost } from "@/lib/notifications";
 import { eq } from "drizzle-orm";
 
 export async function createPost(formData: FormData) {
@@ -58,6 +59,14 @@ export async function createPost(formData: FormData) {
                 userId: userId,
             })
             .returning();
+
+        // Versende Benachrichtigung für "Neue Posts" (opt-in) an andere
+        try {
+            const sessionUserName = session?.user?.name ?? null
+            await notifyNewPost(newPost[0].id, userId, sessionUserName)
+        } catch (e) {
+            console.error('Failed to send new-post notifications', e)
+        }
 
         redirect(`/posts/${newPost[0].id}`);
     } catch (err: unknown) {

@@ -1,91 +1,154 @@
-import { eq, gte } from 'drizzle-orm'
-import { db, users, userSettings } from '@/lib/db/schema'
-import { renderTemplate, sendEmail, type NotificationLevel, type TemplatePayload } from '@/lib/email'
+import { and, eq, inArray, ne } from 'drizzle-orm'
+import { db, users, userSettings, comments as commentsTable } from '@/lib/db/schema'
+import { renderTemplate, sendEmail, type TemplatePayload } from '@/lib/email'
 
-type MinimalUser = {
-	id: string
-	name: string | null
-	email: string | null
-	emailNotificationsLevel: number
-}
+// Benachrichtigungen: granular pro Ereignis
 
-/**
- * Prüft die Benachrichtigungseinstellung eines Users und versendet ggf. eine E-Mail.
- * level: 1=Trigger/Moment, 2=Neuer Post, 3=Aktivität (Reaktion/Kommentar/...)
- */
-export async function notifyUserByLevel(
-	userId: string,
-	level: NotificationLevel,
-	payload: TemplatePayload
-) {
-	const settingRows = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1)
-	const setting = settingRows[0]
-	if (!setting || (setting.emailNotificationsLevel ?? 0) < level) {
-		return { skipped: true, reason: 'level-disabled' }
-	}
-
-	const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
-	const user = userRows[0]
-	if (!user || !user.email) {
-		return { skipped: true, reason: 'no-email' }
-	}
-
-	const rendered = renderTemplate(level, payload)
-	await sendEmail({ to: user.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
-	return { sent: true }
-}
-
-/**
- * Sendet eine E-Mail an alle Nutzer, deren emailNotificationsLevel >= level ist.
- * Nutzt dieselbe Vorlage/den selben Payload für alle.
- */
-export async function notifyAllEligibleByLevel(
-	level: NotificationLevel,
-	payload: TemplatePayload
-) {
+export async function notifyMomentStart(startDate: Date) {
 	const rows = await db
-		.select({
-			userId: userSettings.userId,
-			emailNotificationsLevel: userSettings.emailNotificationsLevel,
-			email: users.email,
-			name: users.name,
-		})
+		.select({ email: users.email, userId: users.id })
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
-		.where(gte(userSettings.emailNotificationsLevel, level))
+		.where(eq(userSettings.emailNotifyDailyMoment, 1))
 
 	if (!rows.length) return { sent: 0 }
 
-	const rendered = renderTemplate(level, payload)
+	const rendered = renderTemplate({ type: 'moment', startDate })
 	let sent = 0
-	for (const row of rows) {
-		if (!row.email) continue
+	for (const r of rows) {
+		if (!r.email) continue
 		try {
-			await sendEmail({ to: row.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
-			sent += 1
-		} catch (err) {
-			console.error('Email send failed for user', row.userId, err)
+			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+			sent++
+		} catch (e) {
+			console.error('Failed to send moment email to', r.userId, e)
 		}
 	}
 	return { sent }
 }
 
-/**
- * Utility: hole einen MinimalUser inkl. Settings (zur optionalen Personalisierung von Vorlagen).
- */
-export async function getUserWithSettings(userId: string): Promise<MinimalUser | null> {
-	const rows = await db
-		.select({
-			id: users.id,
-			name: users.name,
-			email: users.email,
-			emailNotificationsLevel: userSettings.emailNotificationsLevel,
-		})
-		.from(users)
-		.innerJoin(userSettings, eq(userSettings.userId, users.id))
-		.where(eq(users.id, userId))
-		.limit(1)
+export async function notifyNewPost(postId: string, authorId: string, authorName?: string | null) {
+	const recipients = await db
+		.select({ email: users.email, userId: users.id })
+		.from(userSettings)
+		.innerJoin(users, eq(users.id, userSettings.userId))
+		.where(and(eq(userSettings.emailNotifyNewPosts, 1), ne(users.id, authorId)))
 
-	return rows[0] || null
+	if (!recipients.length) return { sent: 0 }
+	const rendered = renderTemplate({ type: 'new-post', authorName, postId })
+	let sent = 0
+	for (const r of recipients) {
+		if (!r.email) continue
+		try {
+			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+			sent++
+		} catch (e) {
+			console.error('Failed to send new-post email to', r.userId, e)
+		}
+	}
+	return { sent }
+}
+
+export async function notifyCommentCreated(opts: { postId: string; actorId: string; actorName?: string | null; postAuthorId: string }) {
+	const { postId, actorId, actorName, postAuthorId } = opts
+
+	const recipientsSet = new Set<string>()
+
+	// 1) Post-Autor, wenn Scope >=1
+	const authorRows = await db
+		.select({ email: users.email, userId: users.id, scope: userSettings.emailCommentScope })
+		.from(userSettings)
+		.innerJoin(users, eq(users.id, userSettings.userId))
+		.where(eq(users.id, postAuthorId))
+
+	if (authorRows[0] && authorRows[0].scope >= 1 && authorRows[0].userId !== actorId && authorRows[0].email) {
+		recipientsSet.add(JSON.stringify({ userId: authorRows[0].userId, email: authorRows[0].email }))
+	}
+
+	// 2) Nutzer, die bereits unter dem Post kommentiert haben (Scope >=2)
+	const commenters = await db
+		.select({ uid: commentsTable.userId })
+		.from(commentsTable)
+		.where(eq(commentsTable.postId, postId))
+	const commenterIds = Array.from(new Set(commenters.map(c => c.uid).filter(uid => uid !== actorId)))
+	if (commenterIds.length) {
+		const rows = await db
+			.select({ userId: users.id, email: users.email, scope: userSettings.emailCommentScope })
+			.from(userSettings)
+			.innerJoin(users, eq(users.id, userSettings.userId))
+			.where(and(inArray(users.id, commenterIds), ne(users.id, actorId)))
+		for (const r of rows) {
+			if (r.scope >= 2 && r.email) recipientsSet.add(JSON.stringify({ userId: r.userId, email: r.email }))
+		}
+	}
+
+	// 3) Alle Nutzer mit Scope == 3 (globale Kommentare), exkl. Actor
+	const globalRows = await db
+		.select({ userId: users.id, email: users.email })
+		.from(userSettings)
+		.innerJoin(users, eq(users.id, userSettings.userId))
+		.where(and(eq(userSettings.emailCommentScope, 3), ne(users.id, actorId)))
+
+	for (const r of globalRows) {
+		if (r.email) recipientsSet.add(JSON.stringify({ userId: r.userId, email: r.email }))
+	}
+
+	const recipients = Array.from(recipientsSet).map(s => JSON.parse(s) as { userId: string; email: string })
+	if (!recipients.length) return { sent: 0 }
+
+	const rendered = renderTemplate({ type: 'comment', actorName, postId })
+	let sent = 0
+	for (const r of recipients) {
+		try {
+			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+			sent++
+		} catch (e) {
+			console.error('Failed to send comment email to', r.userId, e)
+		}
+	}
+	return { sent }
+}
+
+export async function notifyReactionCreated(opts: { postId: string; actorId: string; actorName?: string | null; postAuthorId: string }) {
+	const { postId, actorId, actorName, postAuthorId } = opts
+
+	const recipientsSet = new Set<string>()
+
+	// 1) Post-Autor bei Scope >=1
+	const authorRows = await db
+		.select({ email: users.email, userId: users.id, scope: userSettings.emailReactionScope })
+		.from(userSettings)
+		.innerJoin(users, eq(users.id, userSettings.userId))
+		.where(eq(users.id, postAuthorId))
+
+	if (authorRows[0] && authorRows[0].scope >= 1 && authorRows[0].userId !== actorId && authorRows[0].email) {
+		recipientsSet.add(JSON.stringify({ userId: authorRows[0].userId, email: authorRows[0].email }))
+	}
+
+	// 2) Alle Nutzer mit globalem Reaktions-Scope (==2), exkl. Actor
+	const globals = await db
+		.select({ userId: users.id, email: users.email })
+		.from(userSettings)
+		.innerJoin(users, eq(users.id, userSettings.userId))
+		.where(and(eq(userSettings.emailReactionScope, 2), ne(users.id, actorId)))
+
+	for (const r of globals) {
+		if (r.email) recipientsSet.add(JSON.stringify({ userId: r.userId, email: r.email }))
+	}
+
+	const recipients = Array.from(recipientsSet).map(s => JSON.parse(s) as { userId: string; email: string })
+	if (!recipients.length) return { sent: 0 }
+
+	const rendered = renderTemplate({ type: 'reaction', actorName, postId })
+	let sent = 0
+	for (const r of recipients) {
+		try {
+			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+			sent++
+		} catch (e) {
+			console.error('Failed to send reaction email to', r.userId, e)
+		}
+	}
+	return { sent }
 }
 

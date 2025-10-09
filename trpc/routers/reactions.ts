@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db, reactions, userReactions, posts } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { notifyReactionCreated } from '@/lib/notifications'
 
 export const reactionsRouter = router({
   addToPost: protectedProcedure
@@ -45,6 +46,18 @@ export const reactionsRouter = router({
           .set({ reactionId: input.reactionId })
           .where(and(eq(reactions.id, existingAny[0].id), eq(reactions.userId, userId)));
 
+        // notify (best-effort)
+        try {
+          const postAuthor = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, input.postId)).limit(1)
+          const postAuthorId = postAuthor[0]?.userId
+          if (postAuthorId) {
+            const actorName = ctx.session?.user?.name ?? null
+            await notifyReactionCreated({ postId: input.postId, actorId: userId, actorName, postAuthorId })
+          }
+        } catch (e) {
+          console.error('Failed to send reaction notifications', e)
+        }
+
         return { id: existingAny[0].id, created: false } as const;
       } else {
         const inserted = await db
@@ -55,6 +68,18 @@ export const reactionsRouter = router({
             reactionId: input.reactionId,
           })
           .returning();
+
+        // notify (best-effort)
+        try {
+          const postAuthor = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, input.postId)).limit(1)
+          const postAuthorId = postAuthor[0]?.userId
+          if (postAuthorId) {
+            const actorName = ctx.session?.user?.name ?? null
+            await notifyReactionCreated({ postId: input.postId, actorId: userId, actorName, postAuthorId })
+          }
+        } catch (e) {
+          console.error('Failed to send reaction notifications', e)
+        }
 
         return { id: inserted[0].id, created: true } as const;
       }

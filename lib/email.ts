@@ -1,12 +1,10 @@
 import nodemailer from 'nodemailer'
 
-export type NotificationLevel = 1 | 2 | 3
-
 export type BaseTemplatePayload = {
 	appBaseUrl?: string // e.g. https://crew.example.com
 }
 
-export type TriggerTemplatePayload = BaseTemplatePayload & {
+export type MomentTemplatePayload = BaseTemplatePayload & {
 	type: 'moment'
 	startDate: Date
 }
@@ -17,14 +15,19 @@ export type NewPostTemplatePayload = BaseTemplatePayload & {
 	postId?: string
 }
 
-export type ActivityTemplatePayload = BaseTemplatePayload & {
-	type: 'activity'
-	kind: 'reaction' | 'comment' | 'other'
+export type CommentTemplatePayload = BaseTemplatePayload & {
+	type: 'comment'
 	actorName?: string | null
 	postId?: string
 }
 
-export type TemplatePayload = TriggerTemplatePayload | NewPostTemplatePayload | ActivityTemplatePayload
+export type ReactionTemplatePayload = BaseTemplatePayload & {
+	type: 'reaction'
+	actorName?: string | null
+	postId?: string
+}
+
+export type TemplatePayload = MomentTemplatePayload | NewPostTemplatePayload | CommentTemplatePayload | ReactionTemplatePayload
 
 export type RenderedTemplate = {
 	subject: string
@@ -116,8 +119,8 @@ function htmlToText(html: string): string {
 	return html.replace(/<br\s*\/>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\s+\n/g, '\n').trim()
 }
 
-export function renderTemplate(level: NotificationLevel, payload: TemplatePayload): RenderedTemplate {
-	if (level === 1 && payload.type === 'moment') {
+export function renderTemplate(payload: TemplatePayload): RenderedTemplate {
+	if (payload.type === 'moment') {
 		const base = payload.appBaseUrl || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
 		const title = 'Crew Now Time!'
 		const ctaUrl = base ? `${base}/create` : undefined
@@ -131,7 +134,7 @@ export function renderTemplate(level: NotificationLevel, payload: TemplatePayloa
 		return { subject: 'Crew Now Time!', html, text }
 	}
 
-	if (level === 2 && payload.type === 'new-post') {
+	if (payload.type === 'new-post') {
 		const base = payload.appBaseUrl || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
 		const title = `Neuer Post${payload.authorName ? ` von ${payload.authorName}` : ''}`
 		const ctaUrl = base && payload.postId ? `${base}/posts/${payload.postId}` : base || undefined
@@ -144,17 +147,26 @@ export function renderTemplate(level: NotificationLevel, payload: TemplatePayloa
 		return { subject: `${title}`, html, text }
 	}
 
-	if (level === 3 && payload.type === 'activity') {
+	if (payload.type === 'comment') {
 		const base = payload.appBaseUrl || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
-		const title = payload.kind === 'comment'
-			? `Neuer Kommentar${payload.actorName ? ` von ${payload.actorName}` : ''}`
-			: payload.kind === 'reaction'
-				? `Neue Reaktion${payload.actorName ? ` von ${payload.actorName}` : ''}`
-				: 'Neue Aktivität'
+		const title = `Neuer Kommentar${payload.actorName ? ` von ${payload.actorName}` : ''}`
 		const ctaUrl = base && payload.postId ? `${base}/posts/${payload.postId}` : base || undefined
 		const html = htmlLayout(title, `
 			<h1>${escapeHtml(title)}</h1>
-			<p>Es ist was passiert.</p>
+			<p>Es gibt einen neuen Kommentar.</p>
+			${ctaUrl ? `<p><a class="btn" href="${ctaUrl}">Ansehen</a></p>` : ''}
+		`)
+		const text = `${title}. ${ctaUrl ? `Ansehen: ${ctaUrl}` : ''}`.trim()
+		return { subject: `${title}`, html, text }
+	}
+
+	if (payload.type === 'reaction') {
+		const base = payload.appBaseUrl || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+		const title = `Neue Reaktion${payload.actorName ? ` von ${payload.actorName}` : ''}`
+		const ctaUrl = base && payload.postId ? `${base}/posts/${payload.postId}` : base || undefined
+		const html = htmlLayout(title, `
+			<h1>${escapeHtml(title)}</h1>
+			<p>Dein Feed hat eine neue Reaktion.</p>
 			${ctaUrl ? `<p><a class="btn" href="${ctaUrl}">Ansehen</a></p>` : ''}
 		`)
 		const text = `${title}. ${ctaUrl ? `Ansehen: ${ctaUrl}` : ''}`.trim()
