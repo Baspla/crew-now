@@ -18,20 +18,17 @@ async function listFiles(dir: string): Promise<string[]> {
       }
     }
   } catch (err) {
-    // ignore missing dir
+    console.error(`Error reading directory ${dir}:`, err);
   }
   return results;
 }
 
 function dbPathToFs(p?: string) {
-  // DB stores paths like `/uploads/reactions/xxx.jpg` — convert to absolute fs path
   if (!p) return '';
-  // ignore absolute/external URLs
   const lower = p.trim().toLowerCase();
   if (lower.startsWith('http:') || lower.startsWith('https:') || lower.startsWith('//') || lower.startsWith('data:')) {
     return '';
   }
-  // remove leading slash
   let cleaned = p.startsWith('/') ? p.slice(1) : p;
   const parts = cleaned.split('/').filter(Boolean);
   let fullPath: string;
@@ -41,8 +38,6 @@ function dbPathToFs(p?: string) {
 
 export async function GET(request: Request) {
   const uploadsDir = join(process.cwd(), 'uploads');
-
-  // AUTH: require internal token via header `x-internal-token` or query `token`
   const url = new URL(request.url);
   const tokenFromQuery = url.searchParams.get('token');
   const dryRun = url.searchParams.get('dry') === 'true' || url.searchParams.get('dry') === '1';
@@ -58,10 +53,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Gather all files on disk under public/uploads
   const filesOnDisk = (await listFiles(uploadsDir)).map((f) => normalize(resolve(f)));
-
-  // Gather all image URLs referenced in DB
   const referenced: Set<string> = new Set();
 
   try {
@@ -74,12 +66,6 @@ export async function GET(request: Request) {
     const reactionRows = await db.select({ imageUrl: userReactions.imageUrl }).from(userReactions);
     for (const r of reactionRows) {
       if (r.imageUrl) referenced.add(dbPathToFs(r.imageUrl));
-    }
-
-    // include users avatars
-    const userRows = await db.select({ image: users.image }).from(users);
-    for (const u of userRows) {
-      if (u.image) referenced.add(dbPathToFs(u.image));
     }
   } catch (err) {
     console.error('Error querying DB for referenced images', err);

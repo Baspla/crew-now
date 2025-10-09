@@ -28,7 +28,6 @@ export async function GET() {
 			config: status.config,
 		});
 	} catch (err: any) {
-		console.error("/api/posting-status error", err);
 		return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
 	}
 }
