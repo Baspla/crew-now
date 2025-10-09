@@ -10,6 +10,8 @@ interface CommentProps {
   userName: string | null;
   userImage?: string | null;
   className?: string;
+  canDelete?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 export default function Comment({
@@ -19,10 +21,12 @@ export default function Comment({
   userId,
   userName,
   userImage,
-  className = ""
+  className = "",
+  canDelete = false,
+  onDelete,
 }: CommentProps) {
   return (
-    <div className={`border-b border-gray-100 pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0 ${className}`}>
+    <div className={`border-bpb-4 mb-4 ${className}`}>
       <div className="flex items-start space-x-3">
         <ProfilePicture 
           src={userImage || undefined}
@@ -42,9 +46,20 @@ export default function Comment({
               format="relative"
               className="text-xs"
             />
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete?.(id)}
+                className="ml-auto text-xs text-red-500 hover:text-red-600 cursor-pointer"
+                aria-label="Kommentar löschen"
+                title="Kommentar löschen"
+              >
+                Löschen
+              </button>
+            )}
           </div>
           
-          <p className="text-gray-800 text-sm leading-relaxed">
+          <p className="text-zinc-800 dark:text-zinc-200 text-sm leading-relaxed">
             {content}
           </p>
         </div>

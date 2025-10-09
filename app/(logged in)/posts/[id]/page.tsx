@@ -1,11 +1,11 @@
-import Comment from "@/components/post/Comment";
 import ReactionBubble from "@/components/post/reactions/ReactionBubble";
-import { db, posts, users, comments, reactions, userReactions } from "@/lib/db/schema";
+import { db, posts, users, reactions, userReactions } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import PageHead from "@/components/layout/PageHead";
-import PostHeader from "@/components/PostHeader";
 import Post from "@/components/post/Post";
+import CommentsSection from "@/components/post/CommentsSection";
+import { auth } from "@/auth";
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +15,7 @@ interface PageProps {
 
 export default async function PostPage({ params }: PageProps) {
   const { id: postId } = await params;
+  const session = await auth();
   
   // Get the post with user data
   const post = await db
@@ -42,20 +43,7 @@ export default async function PostPage({ params }: PageProps) {
     );
   }
 
-  // Get comments for this post
-  const postComments = await db
-    .select({
-      id: comments.id,
-      content: comments.content,
-      creationDate: comments.creationDate,
-      userId: comments.userId,
-      userName: users.name,
-      userImage: users.image,
-    })
-    .from(comments)
-    .leftJoin(users, eq(comments.userId, users.id))
-    .where(eq(comments.postId, postId))
-    .orderBy(desc(comments.creationDate));
+  // Comments werden clientseitig via tRPC geladen
 
   // Get reactions for this post
   const postReactions = await db
@@ -100,28 +88,7 @@ export default async function PostPage({ params }: PageProps) {
       )}
 
       {/* Comments Section */}
-      <div className="mt-8">
-        <h3 className="text-lg font-bold mb-4">Kommentare 
-          <span className="text-sm font-bold text-gray-500 ml-2">{postComments.length}</span>
-        </h3>
-        <div className="space-y-4">
-          {postComments.length === 0 ? (
-            <p className="text-gray-500">Noch keine Kommentare.</p>
-          ) : (
-            postComments.map((comment) => (
-              <Comment
-                key={comment.id}
-                id={comment.id}
-                content={comment.content}
-                creationDate={comment.creationDate}
-                userId={comment.userId}
-                userName={comment.userName}
-                userImage={comment.userImage}
-              />
-            ))
-          )}
-        </div>
-      </div>
+      <CommentsSection postId={postId} currentUserId={session?.user?.id} />
     </main>
   );
 }

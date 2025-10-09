@@ -2,7 +2,7 @@
 
 import { db, posts, users, moment, reactions as reactionsTable, userReactions } from "@/lib/db/schema";
 import type { Post } from "@/lib/db/schema";
-import { desc, eq, gte, inArray } from "drizzle-orm";
+import { SQL, and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 export type FeedPost = Post & {
   userName: string | null;
@@ -19,17 +19,17 @@ export type FeedPost = Post & {
  * Liefert die aktuellen Feed-Posts inkl. Reaktionen, gefiltert ab dem neuesten Moment-Start (falls vorhanden).
  * Diese Funktion läuft auf dem Server und kapselt alle DB-Queries für die Feed-Seite.
  */
-export async function getFeedPosts(limit: number = 50): Promise<FeedPost[]> {
-  // Neueste Moment-Startzeit ermitteln
-  const latestMoment = await db
-    .select({ startDate: moment.startDate })
-    .from(moment)
-    .orderBy(desc(moment.startDate))
-    .limit(1);
+export type PostsWithReactionsOptions = {
+  limit?: number;
+  where?: SQL<unknown>;
+};
 
-  const latestStart = latestMoment[0]?.startDate ?? null;
-
-  const baseQuery = db
+/**
+ * Basiskomposition: Lädt Posts inkl. Userdaten und aggregiert Reaktionen.
+ * Optionale Filter können via `where` übergeben werden.
+ */
+export async function getPostsWithReactions({ limit = 50, where }: PostsWithReactionsOptions = {}): Promise<FeedPost[]> {
+  let query = db
     .select({
       id: posts.id,
       imageUrl: posts.imageUrl,
@@ -45,9 +45,12 @@ export async function getFeedPosts(limit: number = 50): Promise<FeedPost[]> {
     .orderBy(desc(posts.creationDate))
     .limit(limit);
 
-  const allPosts = latestStart
-    ? await baseQuery.where(gte(posts.creationDate, latestStart))
-    : await baseQuery;
+  if (where) {
+    // @ts-expect-error drizzle types allow SQL conditions here
+    query = query.where(where);
+  }
+
+  const allPosts = await query;
 
   // Reaktionen der geladenen Posts holen und den Posts beilegen
   const postIds = allPosts.map((p) => p.id);
@@ -90,4 +93,52 @@ export async function getFeedPosts(limit: number = 50): Promise<FeedPost[]> {
   }
 
   return postsWithReactions as FeedPost[];
+}
+
+/**
+ * Feed-Posts ab dem neuesten Moment (falls vorhanden).
+ */
+export async function getFeedPosts(limit: number = 50): Promise<FeedPost[]> {
+  const latestMoment = await db
+    .select({ startDate: moment.startDate })
+    .from(moment)
+    .orderBy(desc(moment.startDate))
+    .limit(1);
+
+  const latestStart = latestMoment[0]?.startDate ?? null;
+
+  return getPostsWithReactions({
+    limit,
+    where: latestStart ? gte(posts.creationDate, latestStart) : undefined,
+  });
+}
+
+/**
+ * Posts eines bestimmten Users inkl. Reaktionen.
+ */
+export async function getUserPosts(userId: string, limit: number = 50): Promise<FeedPost[]> {
+  return getPostsWithReactions({
+    limit,
+    where: eq(posts.userId, userId),
+  });
+}
+
+/**
+ * Posts innerhalb eines Moments (per ID) inkl. Reaktionen.
+ */
+export async function getPostsForMoment(momentId: string, limit: number = 100): Promise<FeedPost[]> {
+  const momentRow = await db
+    .select({ startDate: moment.startDate, endDate: moment.endDate })
+    .from(moment)
+    .where(eq(moment.id, momentId))
+    .limit(1);
+
+  const range = momentRow[0];
+  if (!range) return [];
+
+  const condition = (range.endDate
+    ? and(gte(posts.creationDate, range.startDate), lte(posts.creationDate, range.endDate))
+    : gte(posts.creationDate, range.startDate)) as SQL<unknown>;
+
+  return getPostsWithReactions({ limit, where: condition });
 }

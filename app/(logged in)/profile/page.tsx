@@ -5,6 +5,7 @@ import ReactionEditor from "@/components/post/reactions/ReactionEditor";
 import { db, posts, users } from "@/lib/db/schema";
 import { eq, count, desc } from "drizzle-orm";
 import PostList from "@/components/post/PostList";
+import { getUserPosts } from "@/lib/feed";
 
 export const dynamic = 'force-dynamic'
 
@@ -40,12 +41,8 @@ export default async function ProfilePage() {
     .from(posts)
     .where(eq(posts.userId, user.id));
 
-  // Posts des Benutzers abrufen
-  const userPosts = await db
-    .select()
-    .from(posts)
-    .where(eq(posts.userId, user.id))
-    .orderBy(desc(posts.creationDate));
+  // Posts des Benutzers inkl. Reaktionen abrufen
+  const userPosts = await getUserPosts(user.id, 100);
 
   return (
     <main className="min-h-screen">

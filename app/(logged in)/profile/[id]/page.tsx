@@ -1,5 +1,5 @@
-import { db, users, posts } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { db, users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import ProfilePicture from "@/components/post/ProfilePicture";
 import DateDisplay from "@/components/DateDisplay";
@@ -7,6 +7,7 @@ import PostImage from "@/components/post/PostImage";
 import UserLink from "@/components/post/UserLink";
 import PageHead from "@/components/layout/PageHead";
 import Post from "@/components/post/Post";
+import { getUserPosts } from "@/lib/feed";
 
 export const dynamic = 'force-dynamic'
 
@@ -32,12 +33,8 @@ export default async function ProfilePage({ params }: PageProps) {
     );
   }
 
-  // Get user's posts
-  const userPosts = await db
-    .select()
-    .from(posts)
-    .where(eq(posts.userId, userId))
-    .orderBy(desc(posts.creationDate));
+  // Get user's posts inkl. Reaktionen
+  const userPosts = await getUserPosts(userId, 100);
 
   return (
     <main>
@@ -77,7 +74,7 @@ export default async function ProfilePage({ params }: PageProps) {
         ) : (
           userPosts.map((post) => (
             <div key={post.id} className="mb-12">
-              <Post post={post} link={true} />
+              <Post post={post} link={true} userName={user.name} userImage={user.image || undefined} />
 
               <div>
                 <DateDisplay date={post.creationDate} />

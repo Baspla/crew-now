@@ -1,8 +1,9 @@
 import PageHead from "@/components/layout/PageHead";
 import PostList from "@/components/post/PostList";
-import { db, moment, posts, users } from "@/lib/db/schema";
-import { and, eq, gte, lte, desc } from "drizzle-orm";
+import { db, moment } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import Link from "next/link";
+import { getPostsForMoment } from "@/lib/feed";
 
 export const dynamic = 'force-dynamic'
 
@@ -28,29 +29,8 @@ export default async function MomentPage({ params }: PageProps) {
     );
   }
 
-  // Get all posts during this moment
-  const postsInMoment = await db
-    .select({
-      id: posts.id,
-      imageUrl: posts.imageUrl,
-      frontImageUrl: posts.frontImageUrl,
-      caption: posts.caption,
-      creationDate: posts.creationDate,
-      userId: posts.userId,
-      userName: users.name,
-      userImage: users.image,
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.userId, users.id))
-    .where(
-      momentData.endDate
-        ? and(
-            gte(posts.creationDate, momentData.startDate),
-            lte(posts.creationDate, momentData.endDate)
-          )
-        : gte(posts.creationDate, momentData.startDate)
-    )
-    .orderBy(desc(posts.creationDate));
+  // Get all posts during this moment inkl. Reaktionen
+  const postsInMoment = await getPostsForMoment(momentId, 200);
 
   return (
     <main>
