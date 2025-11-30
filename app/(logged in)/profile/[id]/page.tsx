@@ -1,10 +1,6 @@
 import { db, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import Link from "next/link";
-import ProfilePicture from "@/components/post/ProfilePicture";
 import DateDisplay from "@/components/DateDisplay";
-import PostImage from "@/components/post/PostImage";
-import UserLink from "@/components/post/UserLink";
 import PageHead from "@/components/layout/PageHead";
 import Post from "@/components/post/Post";
 import { getUserPosts } from "@/lib/feed";
