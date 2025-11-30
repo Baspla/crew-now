@@ -39,10 +39,12 @@ export default function CreatePage() {
   } = useCaptureFlow();
 
   const handleSubmit = async (formData: FormData) => {
+    /* Limit temporarily lifted
     if (postsRemaining !== null && postsRemaining <= 0) {
       setError('Du hast keine Posts mehr übrig.');
       return;
     }
+    */
     const input = {
       postId: (formData.get("postId") as string) || undefined,
       imageUrl: (formData.get("imageUrl") as string)!,
@@ -60,7 +62,8 @@ export default function CreatePage() {
         <ActivateCameraStep
           onActivate={activateCamera}
           postsRemaining={postsRemaining}
-          disabled={postsRemaining !== null && postsRemaining <= 0}
+          // disabled={postsRemaining !== null && postsRemaining <= 0}
+          disabled={false} // Limit temporarily lifted
         />
       )}
       {currentStep === 'preview' && (

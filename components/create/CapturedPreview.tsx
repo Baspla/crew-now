@@ -74,7 +74,8 @@ export default function CapturedPreview({
           <button
             type="submit"
             className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white border-0 rounded-lg cursor-pointer text-base transition-colors font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={(postsRemaining !== null && postsRemaining <= 0) || isSubmitting}
+            // disabled={(postsRemaining !== null && postsRemaining <= 0) || isSubmitting}
+            disabled={isSubmitting} // Limit temporarily lifted
           >
             {isSubmitting ? "Senden..." : "Post senden"}
           </button>

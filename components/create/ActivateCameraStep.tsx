@@ -7,11 +7,13 @@ interface Props {
 }
 
 export default function ActivateCameraStep({ onActivate, postsRemaining, disabled }: Props) {
-  const noPostsLeft = postsRemaining !== null && postsRemaining <= 0;
+  // const noPostsLeft = postsRemaining !== null && postsRemaining <= 0;
+  const noPostsLeft = false; // Limit temporarily lifted
   return (
     <div className="flex flex-col items-center gap-6 py-10">
       <div className="text-center max-w-md space-y-2">
         <h2 className="text-xl font-semibold">Bereit ein neues Bild zu machen?</h2>
+        {/* Limit temporarily lifted
         {noPostsLeft ? (
           <p className="text-sm text-red-500 font-medium mt-2">
             Du hast dein Posting-Limit für heute erreicht.
@@ -21,6 +23,7 @@ export default function ActivateCameraStep({ onActivate, postsRemaining, disable
             Du hast noch {postsRemaining ? postsRemaining : "einige"} Posts heute übrig.
           </p>
         )}
+        */}
       </div>
       <button
         type="button"

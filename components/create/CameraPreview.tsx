@@ -51,7 +51,8 @@ export default function CameraPreview({
               <button
                 type="button"
                 onClick={startCaptureSequence}
-                disabled={!isCameraSupported || isCapturing || (postsRemaining !== null && postsRemaining <= 0)}
+                // disabled={!isCameraSupported || isCapturing || (postsRemaining !== null && postsRemaining <= 0)}
+                disabled={!isCameraSupported || isCapturing} // Limit temporarily lifted
                 className="w-14 h-14 bg-black text-white opacity-60 hover:opacity-80 disabled:bg-zinc-900 disabled:cursor-not-allowed rounded-full cursor-pointer transition-colors flex items-center justify-center"
                 title={isCapturing ? 'Aufnahme läuft...' : 'Beide Kameras aufnehmen (aktuelle zuerst)'}
               >
@@ -82,12 +83,14 @@ export default function CameraPreview({
           <p className="text-sm text-gray-600">Aktuelle Kamera zuerst, dann wird gewechselt...</p>
         </div>
       )}
+      {/* Limit temporarily lifted
       {postsRemaining !== null && postsRemaining <= 0 && (
         <div className="text-center p-4">
           <p className="font-semibold text-red-600">Du hast dein Posting-Limit erreicht.</p>
           <p className="text-sm text-gray-600">Warte auf das nächste Moment-Fenster.</p>
         </div>
       )}
+      */}
     </div>
   );
 }

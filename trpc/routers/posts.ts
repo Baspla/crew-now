@@ -22,10 +22,12 @@ export const postsRouter = router({
       const userId = ctx.session!.user!.id!;
 
       // Enforce posting rules on the server
+      /* Limit temporarily lifted
       const remaining = postsRemainingForUser(userId);
       if (remaining <= 0) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Du hast dein Posting-Limit für Heute erreicht." });
       }
+      */
 
       if (!input.imageUrl) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Back camera image is required" });
