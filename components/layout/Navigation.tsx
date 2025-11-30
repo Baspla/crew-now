@@ -17,7 +17,7 @@ export default function Navigation() {
             href="/moments"
             className="flex-1 text-center text-xs font-medium text-gray-700 dark:text-gray-300 px-2 py-2 rounded-md hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
           >
-            Tage
+            Archiv
           </Link>
           <Link
             href="/create"
@@ -66,7 +66,7 @@ export default function Navigation() {
             href="/moments"
             className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors px-2 py-1 md:px-3 md:py-2 md:rounded-md md:hover:bg-gray-100 md:dark:hover:bg-zinc-800"
           >
-            Tage
+            Archiv
           </Link>
           <Link
             href="/profile"
