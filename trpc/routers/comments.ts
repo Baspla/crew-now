@@ -36,14 +36,25 @@ export const commentsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id!;
 
-      const inserted = await db
-        .insert(comments)
-        .values({ postId: input.postId, userId, content: input.content })
-        .returning();
-
-      // determine post author for scoping
+      // determine post author for scoping and verify post exists
       const p = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, input.postId)).limit(1)
-      const postAuthorId = p[0]?.userId
+      if (p.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Post nicht gefunden" });
+      }
+      const postAuthorId = p[0].userId
+
+      let inserted;
+      try {
+        inserted = await db
+          .insert(comments)
+          .values({ postId: input.postId, userId, content: input.content })
+          .returning();
+      } catch (error: any) {
+        if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Benutzer existiert nicht mehr" });
+        }
+        throw error;
+      }
 
       // join user data for immediate UI consumption
       const row = await db

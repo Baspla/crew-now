@@ -1,8 +1,8 @@
 "use server";
 
-import { db, posts, users, moment, reactions as reactionsTable, userReactions } from "@/lib/db/schema";
+import { db, posts, users, moment, reactions as reactionsTable, userReactions, comments } from "@/lib/db/schema";
 import type { Post } from "@/lib/db/schema";
-import { SQL, and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { SQL, and, desc, eq, gte, inArray, lte, count } from "drizzle-orm";
 
 export type FeedPost = Post & {
   userName: string | null;
@@ -13,6 +13,7 @@ export type FeedPost = Post & {
     emoji?: string;
     imageUrl?: string;
   }>;
+  commentCount: number;
 };
 
 /**
@@ -55,7 +56,7 @@ export async function getPostsWithReactions({ limit = 50, where }: PostsWithReac
   // Reaktionen der geladenen Posts holen und den Posts beilegen
   const postIds = allPosts.map((p) => p.id);
   type ReactionForPost = { id: string | number; userId: string; emoji?: string; imageUrl?: string };
-  let postsWithReactions = allPosts as (typeof allPosts[number] & { reactions?: ReactionForPost[] })[];
+  let postsWithReactions = allPosts as (typeof allPosts[number] & { reactions?: ReactionForPost[]; commentCount: number })[];
 
   if (postIds.length > 0) {
     const allReactions = await db
@@ -86,10 +87,27 @@ export async function getPostsWithReactions({ limit = 50, where }: PostsWithReac
       grouped.set(r.postId, list);
     }
 
+    const commentCounts = await db
+      .select({
+        postId: comments.postId,
+        count: count(comments.id),
+      })
+      .from(comments)
+      .where(inArray(comments.postId, postIds))
+      .groupBy(comments.postId);
+
+    const commentCountMap = new Map<string, number>();
+    for (const c of commentCounts) {
+      commentCountMap.set(c.postId, c.count);
+    }
+
     postsWithReactions = allPosts.map((p) => ({
       ...p,
       reactions: grouped.get(p.id)?.map(({ creationDate, ...rest }) => rest) ?? [],
+      commentCount: commentCountMap.get(p.id) ?? 0,
     }));
+  } else {
+    postsWithReactions = [];
   }
 
   return postsWithReactions as FeedPost[];
