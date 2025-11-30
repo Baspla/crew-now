@@ -52,7 +52,8 @@ export default function CreatePage() {
       caption: (formData.get("caption") as string) || undefined,
     };
     const res = await createMutation.mutateAsync(input);
-    router.replace(`/posts/${res.id}`);
+    //router.replace(`/posts/${res.id}`);
+    router.replace(`/feed`);
   };
 
   return (
