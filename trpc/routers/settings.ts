@@ -2,6 +2,7 @@ import { protectedProcedure, router } from "../init";
 import { z } from "zod";
 import { db, userSettings, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { sendNtfy } from "@/lib/ntfy";
 
 const SettingsUpdateInput = z.object({
   emailNotifyDailyMoment: z.boolean().default(false),
@@ -153,5 +154,30 @@ export const settingsRouter = router({
         .where(eq(users.id, userId));
 
       return { topic: newTopic };
+    }),
+
+  testNtfy: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.session!.user!.id!;
+      const userRow = await db
+        .select({ ntfyTopic: users.ntfyTopic })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const topic = userRow[0]?.ntfyTopic;
+      if (!topic) {
+        throw new Error("Kein Ntfy Topic konfiguriert");
+      }
+
+      await sendNtfy({
+        topic,
+        title: "Test Benachrichtigung",
+        message: "Dies ist eine Test-Benachrichtigung von Crew Now.",
+        tags: ["tada"],
+        priority: 3,
+      });
+
+      return { ok: true };
     }),
 });

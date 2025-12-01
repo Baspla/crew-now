@@ -24,9 +24,11 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO }) {
     const [dirty, setDirty] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
+    const [isTesting, setIsTesting] = useState<boolean>(false);
     const formRef = useRef<HTMLFormElement | null>(null);
     const updateMutation = useMutation(trpc.settings.update.mutationOptions());
     const regenerateMutation = useMutation(trpc.settings.regenerateNtfyTopic.mutationOptions());
+    const testNtfyMutation = useMutation(trpc.settings.testNtfy.mutationOptions());
 
     useEffect(() => {
         setDirty(
@@ -108,6 +110,18 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO }) {
             setNtfyTopic(res.topic);
         } finally {
             setIsRegenerating(false);
+        }
+    }
+
+    async function onTestNtfy() {
+        try {
+            setIsTesting(true);
+            await testNtfyMutation.mutateAsync();
+            alert("Test-Benachrichtigung gesendet!");
+        } catch (e) {
+            alert("Fehler beim Senden der Test-Benachrichtigung.");
+        } finally {
+            setIsTesting(false);
         }
     }
 
@@ -226,6 +240,14 @@ export default function SettingsForm({ initial }: { initial: SettingsDTO }) {
                                     className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                 >
                                     {isRegenerating ? '...' : 'Neu generieren'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onTestNtfy}
+                                    disabled={isTesting || isSaving || !ntfyTopic}
+                                    className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    {isTesting ? '...' : 'Test'}
                                 </button>
                             </div>
                             {initial?.ntfyServer && (
