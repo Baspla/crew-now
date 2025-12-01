@@ -1,8 +1,8 @@
-import { db, moment } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { db, moment, posts, users } from "@/lib/db/schema";
+import { desc, eq, and, gte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createHash } from 'crypto';
-import { notifyMomentStart } from '@/lib/notifications';
+import { notifyMomentStart, notifyCheckInReminder } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +26,9 @@ export async function GET(request: Request) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
     try {
+        console.log("Trying to create new moment and send check-in reminder if needed");
         await createNewMoment(forced);
+        await checkAndSendReminder();
         return NextResponse.json({ success: true });
     } catch (err) {
         console.error('Error creating new moment', err);
@@ -169,4 +171,65 @@ async function createNewMoment(forced: boolean) {
         console.log('No WEBHOOK_URL configured, skipping webhook notification.');
     }
     return;
+}
+
+async function checkAndSendReminder() {
+    // 1. Get latest moment
+    const lastMoment = await db.select().from(moment).orderBy(desc(moment.startDate)).limit(1);
+    if (!lastMoment.length){
+        console.log("No moments found, skipping reminder");
+        return;
+    }
+    const m = lastMoment[0];
+
+    // 2. Check if reminder already sent
+    if (m.reminderSent === 1) {
+        console.debug("Reminder already sent, skipping reminder");
+        return;
+    }
+
+    if (!m.startDate) {
+        console.debug("Moment has no start date, skipping reminder");
+        return;
+    }
+
+    // treat endDate === 0 as "unset"
+    const hasEnded = m.endDate != null && m.endDate.getTime() !== 0;
+    if (hasEnded) {
+        console.debug("Moment already ended, skipping reminder", m.endDate);
+        return;
+    }
+
+    // 3. Check delay
+    const delayMinutes = parseInt(process.env.CHECK_IN_REMINDER_DELAY_MINUTES || '120', 10);
+    const now = new Date().getTime();
+    const start = m.startDate.getTime();
+    const diffMinutes = (now - start) / (1000 * 60);
+
+    if (diffMinutes < delayMinutes) {
+        console.debug(`Not enough time passed since moment start (${diffMinutes.toFixed(1)} min), skipping reminder`);
+        return;
+    }
+
+    // 4. Send reminder
+    console.log(`Sending check-in reminder for moment ${m.id}`);
+    
+    // Get posters in this moment
+    const posters = await db.select({ name: users.name })
+        .from(posts)
+        .innerJoin(users, eq(posts.userId, users.id))
+        .where(gte(posts.creationDate, m.startDate));
+    
+    const posterNames = posters.map(p => p.name || 'Unbekannt');
+    const uniqueNames = Array.from(new Set(posterNames));
+
+    // if (uniqueNames.length === 0) {
+    //     console.log("No posts yet, skipping reminder");
+    //     return;
+    // }
+
+    await notifyCheckInReminder(uniqueNames);
+
+    // 5. Mark as sent
+    await db.update(moment).set({ reminderSent: 1 }).where(eq(moment.id, m.id));
 }

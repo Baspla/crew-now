@@ -27,7 +27,12 @@ export type ReactionTemplatePayload = BaseTemplatePayload & {
 	postId?: string
 }
 
-export type TemplatePayload = MomentTemplatePayload | NewPostTemplatePayload | CommentTemplatePayload | ReactionTemplatePayload
+export type CheckInReminderTemplatePayload = BaseTemplatePayload & {
+	type: 'check-in-reminder'
+	posterNames: string[]
+}
+
+export type TemplatePayload = MomentTemplatePayload | NewPostTemplatePayload | CommentTemplatePayload | ReactionTemplatePayload | CheckInReminderTemplatePayload
 
 export type RenderedTemplate = {
 	subject: string
@@ -171,6 +176,44 @@ export function renderTemplate(payload: TemplatePayload): RenderedTemplate {
 		`)
 		const text = `${title}. ${ctaUrl ? `Ansehen: ${ctaUrl}` : ''}`.trim()
 		return { subject: `${title}`, html, text }
+	}
+
+	if (payload.type === 'check-in-reminder') {
+		const base = payload.appBaseUrl || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+		const names = payload.posterNames
+
+		if (names.length === 0) {
+			const title = "Sei der Erste!"
+			const ctaUrl = base ? `${base}/create` : undefined
+			const html = htmlLayout(title, `
+				<h1>${escapeHtml(title)}</h1>
+				<p>Noch hat niemand seinen Moment geteilt. Sei der Erste!</p>
+				${ctaUrl ? `<p><a class="btn" href="${ctaUrl}">Jetzt posten</a></p>` : ''}
+			`)
+			const text = `${title} Noch hat niemand seinen Moment geteilt. ${ctaUrl ? `Jetzt posten: ${ctaUrl}` : ''}`.trim()
+			return { subject: title, html, text }
+		}
+
+		let namesStr = "Jemand"
+		if (names.length === 1) namesStr = names[0]
+		else if (names.length === 2) namesStr = `${names[0]} & ${names[1]}`
+		else if (names.length > 2) {
+			const last = names[names.length - 1]
+			const rest = names.slice(0, -1).join(", ")
+			namesStr = `${rest} & ${last}`
+		}
+		
+		const verb = names.length === 1 ? "hat" : "haben"
+		const title = `Da passiert was!`
+		const ctaUrl = base ? `${base}/feed` : undefined
+		
+		const html = htmlLayout(title, `
+			<h1>${escapeHtml(title)}</h1>
+			<p>Schau mal rein, ${namesStr} ${verb} etwas etwas in Crew Now gepostet.</p>
+			${ctaUrl ? `<p><a class="btn" href="${ctaUrl}">Zum Feed</a></p>` : ''}
+		`)
+		const text = `${title}, schau mal rein! ${ctaUrl ? `Zum Feed: ${ctaUrl}` : ''}`.trim()
+		return { subject: title, html, text }
 	}
 
 	// Fallback – shouldn’t normally happen

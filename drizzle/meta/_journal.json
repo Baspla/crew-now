@@ -64,6 +64,20 @@
       "when": 1760041858279,
       "tag": "0008_sour_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1764545415508,
+      "tag": "0009_wonderful_dust",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1764557568225,
+      "tag": "0010_purple_loa",
+      "breakpoints": true
     }
   ]
 }

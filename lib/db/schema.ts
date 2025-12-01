@@ -48,6 +48,7 @@ export const users = sqliteTable("users", {
     .notNull()
     .$defaultFn(() => new Date()),
   streakLength: integer("streak_length").notNull().default(0),
+  ntfyTopic: text("ntfy_topic"),
 })
 
 export const accounts = sqliteTable(
@@ -101,6 +102,7 @@ export const moment = sqliteTable("moment", {
     .$defaultFn(() => crypto.randomUUID()),
   startDate: integer("start_date", { mode: "timestamp" }).notNull(),
   endDate: integer("end_date", { mode: "timestamp" }),
+  reminderSent: integer("reminder_sent").notNull().default(0),
 })
 
 export const comments = sqliteTable("comments", {
@@ -175,8 +177,14 @@ export const userSettings = sqliteTable("user_settings", {
     .unique(),
   emailNotifyDailyMoment: integer("email_notify_daily_moment").notNull().default(0),
   emailNotifyNewPosts: integer("email_notify_new_posts").notNull().default(0),
+  emailNotifyCheckInReminder: integer("email_notify_check_in_reminder").notNull().default(0),
   emailCommentScope: integer("email_comment_scope").notNull().default(0),
   emailReactionScope: integer("email_reaction_scope").notNull().default(0),
+  ntfyNotifyDailyMoment: integer("ntfy_notify_daily_moment").notNull().default(0),
+  ntfyNotifyNewPosts: integer("ntfy_notify_new_posts").notNull().default(0),
+  ntfyNotifyCheckInReminder: integer("ntfy_notify_check_in_reminder").notNull().default(0),
+  ntfyCommentScope: integer("ntfy_comment_scope").notNull().default(0),
+  ntfyReactionScope: integer("ntfy_reaction_scope").notNull().default(0),
   creationDate: integer("creation_date", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -198,3 +206,5 @@ export type UserSettings = typeof userSettings.$inferSelect;
 // TS Hilfstypen für Scopes
 export type EmailCommentScope = 0 | 1 | 2 | 3;
 export type EmailReactionScope = 0 | 1 | 2;
+export type NtfyCommentScope = 0 | 1 | 2 | 3;
+export type NtfyReactionScope = 0 | 1 | 2;

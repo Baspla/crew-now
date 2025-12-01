@@ -46,7 +46,7 @@ export default function Navigation() {
           {/* App name */}
           <div className="mb-2 pb-2">
             <h2 className="text-2xl px-2 font-bold text-gray-900 dark:text-white">
-              CrewNow
+              Crew Now
             </h2>
           </div>
 

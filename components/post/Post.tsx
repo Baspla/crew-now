@@ -18,6 +18,7 @@ interface PostProps {
     link?: boolean;
     userName?: string | null;
     userImage?: string | null;
+    currentUserId?: string;
 }
 
 export type PostWithReactions = Post & {
@@ -30,7 +31,7 @@ export type PostWithReactions = Post & {
     commentCount?: number;
 };
 
-export default function Post({ post, link, userName, userImage }: PostProps) {
+export default function Post({ post, link, userName, userImage, currentUserId }: PostProps) {
     const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
     const trpc = useTRPC();
     const router = useRouter();
@@ -45,10 +46,12 @@ export default function Post({ post, link, userName, userImage }: PostProps) {
         <div className="w-full flex flex-col">
             {userName && userImage && (
             <PostHeader
+                postId={post.id}
                 userId={post.userId}
                 userImage={userImage}
                 userName={userName}
                 creationDate={post.creationDate}
+                currentUserId={currentUserId}
             />)}
             <PostImage
                 imageUrl={post.imageUrl}

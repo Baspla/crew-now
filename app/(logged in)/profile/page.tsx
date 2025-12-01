@@ -71,7 +71,7 @@ export default async function ProfilePage() {
             Deine Posts
           </h2>
 
-          <PostList posts={userPosts} />
+          <PostList posts={userPosts} currentUserId={user.id} />
       </section>
     </main>
   );

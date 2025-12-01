@@ -1,27 +1,55 @@
-import { and, eq, inArray, ne } from 'drizzle-orm'
+import { and, eq, inArray, ne, or } from 'drizzle-orm'
 import { db, users, userSettings, comments as commentsTable } from '@/lib/db/schema'
 import { renderTemplate, sendEmail, type TemplatePayload } from '@/lib/email'
+import { sendNtfy } from '@/lib/ntfy'
 
 // Benachrichtigungen: granular pro Ereignis
 
 export async function notifyMomentStart(startDate: Date) {
 	const rows = await db
-		.select({ email: users.email, userId: users.id })
+		.select({
+			email: users.email,
+			userId: users.id,
+			ntfyTopic: users.ntfyTopic,
+			emailNotify: userSettings.emailNotifyDailyMoment,
+			ntfyNotify: userSettings.ntfyNotifyDailyMoment
+		})
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
-		.where(eq(userSettings.emailNotifyDailyMoment, 1))
+		.where(or(
+			eq(userSettings.emailNotifyDailyMoment, 1),
+			eq(userSettings.ntfyNotifyDailyMoment, 1)
+		))
 
 	if (!rows.length) return { sent: 0 }
 
 	const rendered = renderTemplate({ type: 'moment', startDate })
 	let sent = 0
 	for (const r of rows) {
-		if (!r.email) continue
-		try {
-			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
-			sent++
-		} catch (e) {
-			console.error('Failed to send moment email to', r.userId, e)
+		// Email
+		if (r.emailNotify === 1 && r.email) {
+			try {
+				await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+				sent++
+			} catch (e) {
+				console.error('Failed to send moment email to', r.userId, e)
+			}
+		}
+		// Ntfy
+		if (r.ntfyNotify === 1 && r.ntfyTopic) {
+			try {
+				await sendNtfy({
+					topic: r.ntfyTopic,
+					title: "Zeit für dein Crew Now!",
+					message: "Es ist Zeit dein Crew Now Moment zu teilen.",
+					tags: ["camera"],
+					priority: 4,
+					actions: [{ action: 'view', label: 'Jetzt aufnehmen', url: `${process.env.NEXT_PUBLIC_APP_URL}/create` }]
+				})
+				sent++
+			} catch (e) {
+				console.error('Failed to send moment ntfy to', r.userId, e)
+			}
 		}
 	}
 	return { sent }
@@ -29,21 +57,45 @@ export async function notifyMomentStart(startDate: Date) {
 
 export async function notifyNewPost(postId: string, authorId: string, authorName?: string | null) {
 	const recipients = await db
-		.select({ email: users.email, userId: users.id })
+		.select({
+			email: users.email,
+			userId: users.id,
+			ntfyTopic: users.ntfyTopic,
+			emailNotify: userSettings.emailNotifyNewPosts,
+			ntfyNotify: userSettings.ntfyNotifyNewPosts
+		})
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
-		.where(and(eq(userSettings.emailNotifyNewPosts, 1), ne(users.id, authorId)))
+		.where(and(
+			or(eq(userSettings.emailNotifyNewPosts, 1), eq(userSettings.ntfyNotifyNewPosts, 1)),
+			ne(users.id, authorId)
+		))
 
 	if (!recipients.length) return { sent: 0 }
 	const rendered = renderTemplate({ type: 'new-post', authorName, postId })
 	let sent = 0
 	for (const r of recipients) {
-		if (!r.email) continue
-		try {
-			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
-			sent++
-		} catch (e) {
-			console.error('Failed to send new-post email to', r.userId, e)
+		if (r.emailNotify === 1 && r.email) {
+			try {
+				await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+				sent++
+			} catch (e) {
+				console.error('Failed to send new-post email to', r.userId, e)
+			}
+		}
+		if (r.ntfyNotify === 1 && r.ntfyTopic) {
+			try {
+				await sendNtfy({
+					topic: r.ntfyTopic,
+					title: "Neuer Post",
+					message: `${authorName || 'Jemand'} hat einen neuen Post erstellt.`,
+					tags: ["camera_flash"],
+					actions: [{ action: 'view', label: 'Ansehen', url: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}` }]
+				})
+				sent++
+			} catch (e) {
+				console.error('Failed to send new-post ntfy to', r.userId, e)
+			}
 		}
 	}
 	return { sent }
@@ -52,58 +104,124 @@ export async function notifyNewPost(postId: string, authorId: string, authorName
 export async function notifyCommentCreated(opts: { postId: string; actorId: string; actorName?: string | null; postAuthorId: string }) {
 	const { postId, actorId, actorName, postAuthorId } = opts
 
-	const recipientsSet = new Set<string>()
+	const recipientsMap = new Map<string, {
+		userId: string;
+		email: string | null;
+		ntfyTopic: string | null;
+		emailScope: number;
+		ntfyScope: number;
+	}>()
 
-	// 1) Post-Autor, wenn Scope >=1
+	const addToMap = (rows: any[]) => {
+		for (const r of rows) {
+			if (r.userId === actorId) continue;
+			recipientsMap.set(r.userId, {
+				userId: r.userId,
+				email: r.email,
+				ntfyTopic: r.ntfyTopic,
+				emailScope: r.emailScope ?? 0,
+				ntfyScope: r.ntfyScope ?? 0
+			})
+		}
+	}
+
+	// 1) Post-Autor
 	const authorRows = await db
-		.select({ email: users.email, userId: users.id, scope: userSettings.emailCommentScope })
+		.select({
+			email: users.email,
+			userId: users.id,
+			ntfyTopic: users.ntfyTopic,
+			emailScope: userSettings.emailCommentScope,
+			ntfyScope: userSettings.ntfyCommentScope
+		})
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
 		.where(eq(users.id, postAuthorId))
 
-	if (authorRows[0] && authorRows[0].scope >= 1 && authorRows[0].userId !== actorId && authorRows[0].email) {
-		recipientsSet.add(JSON.stringify({ userId: authorRows[0].userId, email: authorRows[0].email }))
-	}
+	addToMap(authorRows);
 
-	// 2) Nutzer, die bereits unter dem Post kommentiert haben (Scope >=2)
+	// 2) Nutzer, die bereits unter dem Post kommentiert haben
 	const commenters = await db
 		.select({ uid: commentsTable.userId })
 		.from(commentsTable)
 		.where(eq(commentsTable.postId, postId))
 	const commenterIds = Array.from(new Set(commenters.map(c => c.uid).filter(uid => uid !== actorId)))
+
 	if (commenterIds.length) {
 		const rows = await db
-			.select({ userId: users.id, email: users.email, scope: userSettings.emailCommentScope })
+			.select({
+				userId: users.id,
+				email: users.email,
+				ntfyTopic: users.ntfyTopic,
+				emailScope: userSettings.emailCommentScope,
+				ntfyScope: userSettings.ntfyCommentScope
+			})
 			.from(userSettings)
 			.innerJoin(users, eq(users.id, userSettings.userId))
 			.where(and(inArray(users.id, commenterIds), ne(users.id, actorId)))
-		for (const r of rows) {
-			if (r.scope >= 2 && r.email) recipientsSet.add(JSON.stringify({ userId: r.userId, email: r.email }))
-		}
+		addToMap(rows);
 	}
 
-	// 3) Alle Nutzer mit Scope == 3 (globale Kommentare), exkl. Actor
+	// 3) Alle Nutzer mit Scope == 3 (globale Kommentare)
 	const globalRows = await db
-		.select({ userId: users.id, email: users.email })
+		.select({
+			userId: users.id,
+			email: users.email,
+			ntfyTopic: users.ntfyTopic,
+			emailScope: userSettings.emailCommentScope,
+			ntfyScope: userSettings.ntfyCommentScope
+		})
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
-		.where(and(eq(userSettings.emailCommentScope, 3), ne(users.id, actorId)))
+		.where(and(
+			or(eq(userSettings.emailCommentScope, 3), eq(userSettings.ntfyCommentScope, 3)),
+			ne(users.id, actorId)
+		))
 
-	for (const r of globalRows) {
-		if (r.email) recipientsSet.add(JSON.stringify({ userId: r.userId, email: r.email }))
-	}
+	addToMap(globalRows);
 
-	const recipients = Array.from(recipientsSet).map(s => JSON.parse(s) as { userId: string; email: string })
+	const recipients = Array.from(recipientsMap.values());
 	if (!recipients.length) return { sent: 0 }
 
 	const rendered = renderTemplate({ type: 'comment', actorName, postId })
 	let sent = 0
+
 	for (const r of recipients) {
-		try {
-			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
-			sent++
-		} catch (e) {
-			console.error('Failed to send comment email to', r.userId, e)
+		let shouldEmail = false;
+		let shouldNtfy = false;
+
+		// Logic for Email
+		if (r.emailScope === 3) shouldEmail = true;
+		else if (r.emailScope === 2 && (commenterIds.includes(r.userId) || r.userId === postAuthorId)) shouldEmail = true;
+		else if (r.emailScope === 1 && r.userId === postAuthorId) shouldEmail = true;
+
+		// Logic for Ntfy
+		if (r.ntfyScope === 3) shouldNtfy = true;
+		else if (r.ntfyScope === 2 && (commenterIds.includes(r.userId) || r.userId === postAuthorId)) shouldNtfy = true;
+		else if (r.ntfyScope === 1 && r.userId === postAuthorId) shouldNtfy = true;
+
+		if (shouldEmail && r.email) {
+			try {
+				await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+				sent++
+			} catch (e) {
+				console.error('Failed to send comment email to', r.userId, e)
+			}
+		}
+
+		if (shouldNtfy && r.ntfyTopic) {
+			try {
+				await sendNtfy({
+					topic: r.ntfyTopic,
+					title: "Neuer Kommentar",
+					message: `${actorName || 'Jemand'} hat ein Kommentar hinterlassen.`,
+					tags: ["speech_balloon"],
+					actions: [{ action: 'view', label: 'Ansehen', url: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}` }]
+				})
+				sent++
+			} catch (e) {
+				console.error('Failed to send comment ntfy to', r.userId, e)
+			}
 		}
 	}
 	return { sent }
@@ -112,41 +230,163 @@ export async function notifyCommentCreated(opts: { postId: string; actorId: stri
 export async function notifyReactionCreated(opts: { postId: string; actorId: string; actorName?: string | null; postAuthorId: string }) {
 	const { postId, actorId, actorName, postAuthorId } = opts
 
-	const recipientsSet = new Set<string>()
+	const recipientsMap = new Map<string, {
+		userId: string;
+		email: string | null;
+		ntfyTopic: string | null;
+		emailScope: number;
+		ntfyScope: number;
+	}>()
 
-	// 1) Post-Autor bei Scope >=1
+	const addToMap = (rows: any[]) => {
+		for (const r of rows) {
+			if (r.userId === actorId) continue;
+			recipientsMap.set(r.userId, {
+				userId: r.userId,
+				email: r.email,
+				ntfyTopic: r.ntfyTopic,
+				emailScope: r.emailScope ?? 0,
+				ntfyScope: r.ntfyScope ?? 0
+			})
+		}
+	}
+
+	// 1) Post-Autor
 	const authorRows = await db
-		.select({ email: users.email, userId: users.id, scope: userSettings.emailReactionScope })
+		.select({
+			email: users.email,
+			userId: users.id,
+			ntfyTopic: users.ntfyTopic,
+			emailScope: userSettings.emailReactionScope,
+			ntfyScope: userSettings.ntfyReactionScope
+		})
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
 		.where(eq(users.id, postAuthorId))
 
-	if (authorRows[0] && authorRows[0].scope >= 1 && authorRows[0].userId !== actorId && authorRows[0].email) {
-		recipientsSet.add(JSON.stringify({ userId: authorRows[0].userId, email: authorRows[0].email }))
-	}
+	addToMap(authorRows);
 
-	// 2) Alle Nutzer mit globalem Reaktions-Scope (==2), exkl. Actor
+	// 2) Alle Nutzer mit globalem Reaktions-Scope (==2)
 	const globals = await db
-		.select({ userId: users.id, email: users.email })
+		.select({
+			userId: users.id,
+			email: users.email,
+			ntfyTopic: users.ntfyTopic,
+			emailScope: userSettings.emailReactionScope,
+			ntfyScope: userSettings.ntfyReactionScope
+		})
 		.from(userSettings)
 		.innerJoin(users, eq(users.id, userSettings.userId))
-		.where(and(eq(userSettings.emailReactionScope, 2), ne(users.id, actorId)))
+		.where(and(
+			or(eq(userSettings.emailReactionScope, 2), eq(userSettings.ntfyReactionScope, 2)),
+			ne(users.id, actorId)
+		))
 
-	for (const r of globals) {
-		if (r.email) recipientsSet.add(JSON.stringify({ userId: r.userId, email: r.email }))
-	}
+	addToMap(globals);
 
-	const recipients = Array.from(recipientsSet).map(s => JSON.parse(s) as { userId: string; email: string })
+	const recipients = Array.from(recipientsMap.values());
 	if (!recipients.length) return { sent: 0 }
 
 	const rendered = renderTemplate({ type: 'reaction', actorName, postId })
 	let sent = 0
+
 	for (const r of recipients) {
-		try {
-			await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
-			sent++
-		} catch (e) {
-			console.error('Failed to send reaction email to', r.userId, e)
+		let shouldEmail = false;
+		let shouldNtfy = false;
+
+		// Logic for Email
+		if (r.emailScope === 2) shouldEmail = true;
+		else if (r.emailScope === 1 && r.userId === postAuthorId) shouldEmail = true;
+
+		// Logic for Ntfy
+		if (r.ntfyScope === 2) shouldNtfy = true;
+		else if (r.ntfyScope === 1 && r.userId === postAuthorId) shouldNtfy = true;
+
+		if (shouldEmail && r.email) {
+			try {
+				await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+				sent++
+			} catch (e) {
+				console.error('Failed to send reaction email to', r.userId, e)
+			}
+		}
+
+		if (shouldNtfy && r.ntfyTopic) {
+			try {
+				await sendNtfy({
+					topic: r.ntfyTopic,
+					title: "Neue Reaktion",
+					message: `${actorName || 'Jemand'} hat auf einen Post reagiert.`,
+					tags: ["heart"],
+					actions: [{ action: 'view', label: 'Ansehen', url: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}` }]
+				})
+				sent++
+			} catch (e) {
+				console.error('Failed to send reaction ntfy to', r.userId, e)
+			}
+		}
+	}
+	return { sent }
+}
+
+export async function notifyCheckInReminder(posterNames: string[]) {
+	const recipients = await db
+		.select({
+			email: users.email,
+			userId: users.id,
+			ntfyTopic: users.ntfyTopic,
+			emailNotify: userSettings.emailNotifyCheckInReminder,
+			ntfyNotify: userSettings.ntfyNotifyCheckInReminder
+		})
+		.from(userSettings)
+		.innerJoin(users, eq(users.id, userSettings.userId))
+		.where(or(
+			eq(userSettings.emailNotifyCheckInReminder, 1),
+			eq(userSettings.ntfyNotifyCheckInReminder, 1)
+		))
+
+	if (!recipients.length) return { sent: 0 }
+
+	const rendered = renderTemplate({ type: 'check-in-reminder', posterNames })
+	let sent = 0
+
+	for (const r of recipients) {
+		if (r.emailNotify === 1 && r.email) {
+			try {
+				await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
+				sent++
+			} catch (e) {
+				console.error('Failed to send check-in email to', r.userId, e)
+			}
+		}
+		if (r.ntfyNotify === 1 && r.ntfyTopic) {
+			try {
+				const isBeFirst = posterNames.length === 0;
+				let message = "Noch hat niemand gepostet. Sei der Erste!";
+
+				if (!isBeFirst) {
+					const names = posterNames;
+					let namesStr = names[0];
+					if (names.length === 2) namesStr = `${names[0]} und ${names[1]}`;
+					else if (names.length > 2) namesStr = `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
+					message = `${namesStr} ${names.length === 1 ? 'hat' : 'haben'} ein Crew Now gepostet! Schau doch mal rein.`;
+				}
+
+				await sendNtfy({
+					topic: r.ntfyTopic,
+					title: rendered.subject,
+					message,
+					tags: isBeFirst ? ["rocket"] : ["eyes"],
+					actions: [{ 
+						action: 'view', 
+						label: isBeFirst ? 'Jetzt posten' : 'Ansehen', 
+						url: `${process.env.NEXT_PUBLIC_APP_URL}/${isBeFirst ? 'create' : 'feed'}` 
+					}]
+				})
+				sent++
+			} catch (e) {
+				console.error('Failed to send check-in ntfy to', r.userId, e)
+			}
 		}
 	}
 	return { sent }

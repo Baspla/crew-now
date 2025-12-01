@@ -5,6 +5,7 @@ import PageHead from "@/components/layout/PageHead";
 import Post from "@/components/post/Post";
 import { getUserPosts } from "@/lib/feed";
 import ProfileSection from "@/components/profile/ProfileSection";
+import { auth } from "@/auth";
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,7 @@ interface PageProps {
 
 export default async function ProfilePage({ params }: PageProps) {
   const { id: userId } = await params;
+  const session = await auth();
 
   // Get user data
   const user = await db
@@ -54,7 +56,7 @@ export default async function ProfilePage({ params }: PageProps) {
         ) : (
           userPosts.map((post) => (
             <div key={post.id} className="mb-12">
-              <Post post={post} link={true} userName={user.name} userImage={user.image || undefined} />
+              <Post post={post} link={true} userName={user.name} userImage={user.image || undefined} currentUserId={session?.user?.id} />
 
               <div>
                 <DateDisplay date={post.creationDate} />

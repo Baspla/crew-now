@@ -4,6 +4,7 @@ import { db, moment } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getPostsForMoment } from "@/lib/feed";
+import { auth } from "@/auth";
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,7 @@ interface PageProps {
 
 export default async function MomentPage({ params }: PageProps) {
   const { id: momentId } = await params;
+  const session = await auth();
   
   // Get the moment details
   const momentData = await db
@@ -43,7 +45,7 @@ export default async function MomentPage({ params }: PageProps) {
 
       <h2 className="text-xl font-semibold mb-4">Posts an diesem Tag</h2>
       
-      <PostList posts={postsInMoment} />
+      <PostList posts={postsInMoment} currentUserId={session?.user?.id} />
     </main>
   );
 }

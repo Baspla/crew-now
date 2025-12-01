@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { db, posts as postsTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { processAndSave } from "@/lib/image";
+import { processAndSave, deleteImage } from "@/lib/image";
 import { postsRemainingForUser } from "@/lib/postingRules";
 import { notifyNewPost } from "@/lib/notifications";
 import crypto from "crypto";
@@ -77,5 +77,30 @@ export const postsRouter = router({
         }
         throw err;
       }
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ postId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session!.user!.id!;
+      
+      const post = await db.select().from(postsTable).where(eq(postsTable.id, input.postId)).get();
+
+      if (!post) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+      }
+
+      if (post.userId !== userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to delete this post" });
+      }
+
+      // Delete images
+      if (post.imageUrl) await deleteImage(post.imageUrl);
+      if (post.frontImageUrl) await deleteImage(post.frontImageUrl);
+
+      // Delete post from DB
+      await db.delete(postsTable).where(eq(postsTable.id, input.postId));
+
+      return { success: true };
     }),
 });

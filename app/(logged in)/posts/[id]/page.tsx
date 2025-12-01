@@ -64,7 +64,7 @@ export default async function PostPage({ params }: PageProps) {
       <PageHead title="Post Details" backUrl="/feed" />
 
       <div className="mt-6">
-        <Post post={post} userName={post.userName} userImage={post.userImage} />
+        <Post post={post} userName={post.userName} userImage={post.userImage} currentUserId={session?.user?.id} />
       </div>
 
       {/* Reactions Section */}

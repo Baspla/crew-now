@@ -6,16 +6,30 @@ import { eq } from "drizzle-orm";
 const SettingsUpdateInput = z.object({
   emailNotifyDailyMoment: z.boolean().default(false),
   emailNotifyNewPosts: z.boolean().default(false),
+  emailNotifyCheckInReminder: z.boolean().default(false),
   emailCommentScope: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).default(0),
   emailReactionScope: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(0),
+  ntfyNotifyDailyMoment: z.boolean().default(false),
+  ntfyNotifyNewPosts: z.boolean().default(false),
+  ntfyNotifyCheckInReminder: z.boolean().default(false),
+  ntfyCommentScope: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).default(0),
+  ntfyReactionScope: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(0),
 });
 
 const SettingsOutput = z.object({
   emailNotifyDailyMoment: z.boolean(),
   emailNotifyNewPosts: z.boolean(),
+  emailNotifyCheckInReminder: z.boolean(),
   emailCommentScope: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
   emailReactionScope: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+  ntfyNotifyDailyMoment: z.boolean(),
+  ntfyNotifyNewPosts: z.boolean(),
+  ntfyNotifyCheckInReminder: z.boolean(),
+  ntfyCommentScope: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+  ntfyReactionScope: z.union([z.literal(0), z.literal(1), z.literal(2)]),
   currentEmail: z.string().nullable(),
+  ntfyTopic: z.string().nullable(),
+  ntfyServer: z.string().nullable(),
 });
 
 export type SettingsDTO = z.infer<typeof SettingsOutput>;
@@ -32,19 +46,29 @@ export const settingsRouter = router({
         .where(eq(userSettings.userId, userId))
         .limit(1);
       const userRow = await db
-        .select({ email: users.email })
+        .select({ email: users.email, ntfyTopic: users.ntfyTopic })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
       const currentEmail = userRow[0]?.email ?? null;
+      const ntfyTopic = userRow[0]?.ntfyTopic ?? null;
+      const ntfyServer = process.env.NTFY_SERVER ?? null;
 
       if (!rows[0]) {
         return {
           emailNotifyDailyMoment: false,
           emailNotifyNewPosts: false,
+          emailNotifyCheckInReminder: false,
           emailCommentScope: 0,
           emailReactionScope: 0,
+          ntfyNotifyDailyMoment: false,
+          ntfyNotifyNewPosts: false,
+          ntfyNotifyCheckInReminder: false,
+          ntfyCommentScope: 0,
+          ntfyReactionScope: 0,
           currentEmail,
+          ntfyTopic,
+          ntfyServer,
         };
       }
 
@@ -52,9 +76,17 @@ export const settingsRouter = router({
       return {
         emailNotifyDailyMoment: !!s.emailNotifyDailyMoment,
         emailNotifyNewPosts: !!s.emailNotifyNewPosts,
+        emailNotifyCheckInReminder: !!s.emailNotifyCheckInReminder,
         emailCommentScope: (s.emailCommentScope as 0 | 1 | 2 | 3) ?? 0,
         emailReactionScope: (s.emailReactionScope as 0 | 1 | 2) ?? 0,
+        ntfyNotifyDailyMoment: !!s.ntfyNotifyDailyMoment,
+        ntfyNotifyNewPosts: !!s.ntfyNotifyNewPosts,
+        ntfyNotifyCheckInReminder: !!s.ntfyNotifyCheckInReminder,
+        ntfyCommentScope: (s.ntfyCommentScope as 0 | 1 | 2 | 3) ?? 0,
+        ntfyReactionScope: (s.ntfyReactionScope as 0 | 1 | 2) ?? 0,
         currentEmail,
+        ntfyTopic,
+        ntfyServer,
       } satisfies SettingsDTO;
     }),
 
@@ -70,8 +102,14 @@ export const settingsRouter = router({
         .set({
           emailNotifyDailyMoment: input.emailNotifyDailyMoment ? 1 : 0,
           emailNotifyNewPosts: input.emailNotifyNewPosts ? 1 : 0,
+          emailNotifyCheckInReminder: input.emailNotifyCheckInReminder ? 1 : 0,
           emailCommentScope: Math.max(0, Math.min(3, Math.floor(input.emailCommentScope ?? 0))) as 0 | 1 | 2 | 3,
           emailReactionScope: Math.max(0, Math.min(2, Math.floor(input.emailReactionScope ?? 0))) as 0 | 1 | 2,
+          ntfyNotifyDailyMoment: input.ntfyNotifyDailyMoment ? 1 : 0,
+          ntfyNotifyNewPosts: input.ntfyNotifyNewPosts ? 1 : 0,
+          ntfyNotifyCheckInReminder: input.ntfyNotifyCheckInReminder ? 1 : 0,
+          ntfyCommentScope: Math.max(0, Math.min(3, Math.floor(input.ntfyCommentScope ?? 0))) as 0 | 1 | 2 | 3,
+          ntfyReactionScope: Math.max(0, Math.min(2, Math.floor(input.ntfyReactionScope ?? 0))) as 0 | 1 | 2,
           updatedDate: now,
         })
         .where(eq(userSettings.userId, userId));
@@ -87,13 +125,33 @@ export const settingsRouter = router({
           userId,
           emailNotifyDailyMoment: input.emailNotifyDailyMoment ? 1 : 0,
           emailNotifyNewPosts: input.emailNotifyNewPosts ? 1 : 0,
+          emailNotifyCheckInReminder: input.emailNotifyCheckInReminder ? 1 : 0,
           emailCommentScope: Math.max(0, Math.min(3, Math.floor(input.emailCommentScope ?? 0))) as 0 | 1 | 2 | 3,
           emailReactionScope: Math.max(0, Math.min(2, Math.floor(input.emailReactionScope ?? 0))) as 0 | 1 | 2,
+          ntfyNotifyDailyMoment: input.ntfyNotifyDailyMoment ? 1 : 0,
+          ntfyNotifyNewPosts: input.ntfyNotifyNewPosts ? 1 : 0,
+          ntfyNotifyCheckInReminder: input.ntfyNotifyCheckInReminder ? 1 : 0,
+          ntfyCommentScope: Math.max(0, Math.min(3, Math.floor(input.ntfyCommentScope ?? 0))) as 0 | 1 | 2 | 3,
+          ntfyReactionScope: Math.max(0, Math.min(2, Math.floor(input.ntfyReactionScope ?? 0))) as 0 | 1 | 2,
           creationDate: now,
           updatedDate: now,
         });
       }
 
       return { ok: true } as const;
+    }),
+
+  regenerateNtfyTopic: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.session!.user!.id!;
+      const prefix = process.env.NTFY_TOPIC_PREFIX || 'crewnow';
+      const cleanPrefix = prefix.replace(/^\/+/, '').replace(/\/+$/, '');
+      const newTopic = `${cleanPrefix}-${crypto.randomUUID()}`;
+
+      await db.update(users)
+        .set({ ntfyTopic: newTopic })
+        .where(eq(users.id, userId));
+
+      return { topic: newTopic };
     }),
 });

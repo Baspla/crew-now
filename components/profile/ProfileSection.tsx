@@ -38,6 +38,7 @@ export default function ProfileSection({
         </div>
 
         {/* Statistiken - zentriert und aufgeteilt */}
+        {/*
         <div className="flex justify-center">
           <div
             className="flex divide-x divide-gray-300 dark:divide-gray-600"
@@ -53,7 +54,7 @@ export default function ProfileSection({
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Bilder</div>
             </div>
-            {/*<div className="px-4 text-center">
+            <div className="px-4 text-center">
               <div
                 className="text-xl font-semibold text-gray-900 dark:text-white"
                 aria-label={`${streak} Tage Streak`}
@@ -61,9 +62,10 @@ export default function ProfileSection({
                 {streak}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Streak</div>
-            </div>*/}
+            </div>
           </div>
         </div>
+        */}
       </div>
     </section>
   );

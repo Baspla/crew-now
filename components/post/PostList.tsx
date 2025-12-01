@@ -9,9 +9,10 @@ type ExtendedPost = PostWithReactions & {
 
 interface PostListProps {
   posts: ExtendedPost[];
+  currentUserId?: string;
 }
 
-export default function PostList({ posts }: PostListProps) {
+export default function PostList({ posts, currentUserId }: PostListProps) {
   if (!posts || posts.length === 0) {
     return <p>Noch keine Posts vorhanden.</p>;
   }
@@ -20,7 +21,7 @@ export default function PostList({ posts }: PostListProps) {
     <>
       {posts.map((post) => (
         <div key={post.id} className="pb-6 mb-6 flex justify-center">
-          <Post post={post} userName={post.userName} userImage={post.userImage} link />
+          <Post post={post} userName={post.userName} userImage={post.userImage} link currentUserId={currentUserId} />
         </div>
       ))}
     </>

@@ -64,4 +64,19 @@ export async function processAndSave(
   return `/uploads/posts/${filename}`;
 }
 
-export default { dataUrlToBuffer, ensureUploadsDir, processAndSave };
+export async function deleteImage(relativePath: string) {
+  if (!relativePath) return;
+  // Remove leading slash if present
+  const cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+  // Construct absolute path. Note: relativePath includes "uploads/posts/..."
+  const fullPath = path.join(process.cwd(), cleanPath);
+  
+  try {
+    await fs.promises.unlink(fullPath);
+    console.log(`Deleted image: ${fullPath}`);
+  } catch (error) {
+    console.error(`Failed to delete image at ${fullPath}:`, error);
+  }
+}
+
+export default { dataUrlToBuffer, ensureUploadsDir, processAndSave, deleteImage };
