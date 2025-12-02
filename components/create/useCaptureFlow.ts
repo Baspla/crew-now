@@ -72,7 +72,8 @@ export function useCaptureFlow() {
         stopStream();
         // Halte den aktuellen Kamera-Typ synchron zum tatsächlich gestarteten Stream
         setCurrentCamera(facingMode);
-        const constraints: MediaStreamConstraints = {
+        
+        let constraints: MediaStreamConstraints = {
           video: {
             facingMode,
             aspectRatio: 3 / 4,
@@ -81,6 +82,43 @@ export function useCaptureFlow() {
           },
           audio: false,
         };
+
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter((d) => d.kind === "videoinput" && d.label);
+
+          if (videoDevices.length > 0) {
+            const excludedKeywords = ["Ultra", "Dual"];
+            const isUser = facingMode === "user";
+            const targetKeywords = isUser
+              ? ["front", "user", "selfie", "vorder"]
+              : ["back", "environment", "rear", "rück"];
+
+            const candidates = videoDevices.filter((device) => {
+              const label = device.label.toLowerCase();
+              const matchesFacing = targetKeywords.some((k) => label.includes(k.toLowerCase()));
+              if (!matchesFacing) return false;
+              const hasExcluded = excludedKeywords.some((k) => label.includes(k.toLowerCase()));
+              return !hasExcluded;
+            });
+
+            if (candidates.length > 0) {
+              console.log("Possible camera candidates:", candidates);
+              constraints = {
+                video: {
+                  deviceId: { exact: candidates[0].deviceId },
+                  aspectRatio: 3 / 4,
+                  width: { min: 1000 },
+                  height: { min: 1500 },
+                },
+                audio: false,
+              };
+            }
+          }
+        } catch (err) {
+          console.warn("Smart camera selection failed", err);
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
         if (videoRef.current) {
