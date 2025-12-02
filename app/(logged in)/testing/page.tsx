@@ -39,6 +39,8 @@ export default function TestingPage() {
   const [settings, setSettings] = useState<CameraSettings>(DEFAULT_SETTINGS);
   const [activeConstraints, setActiveConstraints] = useState<MediaTrackConstraints | null>(null);
   const [actualSettings, setActualSettings] = useState<MediaTrackSettings | null>(null);
+  const [deviceCapabilities, setDeviceCapabilities] = useState<Record<string, MediaTrackCapabilities>>({});
+  const [isScanning, setIsScanning] = useState(false);
 
   // Fetch available devices
   useEffect(() => {
@@ -55,6 +57,32 @@ export default function TestingPage() {
     };
     getDevices();
   }, []);
+
+  const scanCapabilities = async () => {
+    if (devices.length === 0) return;
+    setIsScanning(true);
+    const caps: Record<string, MediaTrackCapabilities> = {};
+
+    // Stop current stream to avoid conflicts
+    stopCamera();
+
+    for (const device of devices) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: device.deviceId } },
+        });
+        const track = stream.getVideoTracks()[0];
+        if (track && track.getCapabilities) {
+          caps[device.deviceId] = track.getCapabilities();
+        }
+        track.stop();
+      } catch (err) {
+        console.error(`Could not get capabilities for device ${device.label}:`, err);
+      }
+    }
+    setDeviceCapabilities(caps);
+    setIsScanning(false);
+  };
 
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -326,6 +354,38 @@ export default function TestingPage() {
                 ? JSON.stringify(actualSettings, null, 2)
                 : "Keine aktiven Einstellungen"}
             </pre>
+          </div>
+
+          <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Geräte Fähigkeiten</h2>
+              <button
+                onClick={scanCapabilities}
+                disabled={isScanning}
+                className="text-xs bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 px-3 py-1 rounded transition-colors"
+              >
+                {isScanning ? "Scanne..." : "Scannen"}
+              </button>
+            </div>
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+              {Object.keys(deviceCapabilities).length === 0 && !isScanning && (
+                <p className="text-sm text-gray-500">Klicken Sie auf Scannen um Fähigkeiten zu laden.</p>
+              )}
+              {devices.map((device) => {
+                const caps = deviceCapabilities[device.deviceId];
+                if (!caps) return null;
+                return (
+                  <div key={device.deviceId} className="space-y-2">
+                    <h3 className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {device.label || device.deviceId}
+                    </h3>
+                    <pre className="text-xs overflow-auto bg-gray-50 dark:bg-black p-2 rounded border border-gray-200 dark:border-zinc-800">
+                      {JSON.stringify(caps, null, 2)}
+                    </pre>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
