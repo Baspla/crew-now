@@ -76,7 +76,7 @@ export function useCaptureFlow() {
         let constraints: MediaStreamConstraints = {
           video: {
             facingMode,
-            aspectRatio: 3 / 4,
+            aspectRatio: 4/3,
             width: { min: 1000 },
             height: { min: 1500 },
           },
@@ -107,7 +107,7 @@ export function useCaptureFlow() {
               constraints = {
                 video: {
                   deviceId: { exact: candidates[0].deviceId },
-                  aspectRatio: 3 / 4,
+                  aspectRatio: 4/3,
                   width: { min: 1000 },
                   height: { min: 1500 },
                 },
