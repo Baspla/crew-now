@@ -39,7 +39,7 @@ export default async function MomentPage({ params }: PageProps) {
       <PageHead title={`Rückblick zum ${new Date(momentData.startDate).toLocaleDateString("de-DE")}`} subtitle="Once upon a time..." backUrl="/moments" />
       
       <div className="mb-8">
-        <p><strong>Startzeit: </strong> {new Date(momentData.startDate).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p>
+        <p><strong>Startzeit: </strong> {new Date(momentData.startDate).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}</p>
         <p><strong>Anzahl Posts:</strong> {postsInMoment.length}</p>
       </div>
 

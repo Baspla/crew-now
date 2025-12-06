@@ -1,8 +1,8 @@
 import { db, moment, posts, users } from "@/lib/db/schema";
 import { desc, eq, and, gte } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { createHash } from 'crypto';
 import { notifyMomentStart, notifyCheckInReminder } from '@/lib/notifications';
+import { calculateHashTime, getDateParts } from "@/lib/time";
 
 export const dynamic = 'force-dynamic'
 
@@ -40,53 +40,7 @@ async function createNewMoment(forced: boolean) {
     // Always compute using Europe/Berlin timezone, regardless of container's local (UTC)
     const TZ = 'Europe/Berlin';
 
-    // Helpers for timezone-safe calculations
-    const dtf = new Intl.DateTimeFormat('en-GB', {
-        timeZone: TZ,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hourCycle: 'h23',
-    });
-
-    const getParts = (d: Date) => {
-        const parts = dtf.formatToParts(d);
-        const map: Record<string, number> = {};
-        for (const p of parts) {
-            if (p.type !== 'literal') map[p.type] = parseInt(p.value, 10);
-        }
-        return {
-            year: map.year,
-            month: map.month,
-            day: map.day,
-            hour: map.hour,
-            minute: map.minute,
-            second: map.second,
-        } as const;
-    };
-
-    // Offset of TZ relative to UTC at given instant (ms)
-    const getTzOffsetMs = (d: Date) => {
-        const p = getParts(d);
-        const asUTC = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
-        return asUTC - d.getTime();
-    };
-
-    // Convert a local wall time in TZ to an actual UTC instant
-    const zonedTimeToUtc = (y: number, m: number, d: number, h = 0, mi = 0, s = 0) => {
-        const candidate = new Date(Date.UTC(y, m - 1, d, h, mi, s));
-        const offset = getTzOffsetMs(candidate);
-        return new Date(candidate.getTime() - offset);
-    };
-
-    const nowDate = new Date(); // actual current UTC instant
-    const now = nowDate.getTime();
-    const todayParts = getParts(nowDate);
-    const startOfDay = zonedTimeToUtc(todayParts.year, todayParts.month, todayParts.day, 8, 0, 0); // 08:00 Berlin
-    const endOfDay = zonedTimeToUtc(todayParts.year, todayParts.month, todayParts.day, 20, 0, 0); // 20:00 Berlin
+        const { nowDate, now, todayParts, startOfDay, endOfDay } = getDateParts(new Date(), TZ);
 
     // Check if current time is between starting time of day and ending time of day (in Berlin time)
     if ((now < startOfDay.getTime() || now > endOfDay.getTime()) && !forced) {
@@ -103,8 +57,8 @@ async function createNewMoment(forced: boolean) {
     // Check if a moment was already created today
     if (lastMoment.length > 0 && !forced) {
         const last = lastMoment[0];
-        const lastParts = getParts(new Date(last.startDate));
-        if (
+        const lastParts = getDateParts(last.startDate, TZ).todayParts;
+        if (    
             lastParts.year === todayParts.year &&
             lastParts.month === todayParts.month &&
             lastParts.day === todayParts.day
@@ -115,11 +69,7 @@ async function createNewMoment(forced: boolean) {
     }
 
     // Calculate hash for today's time
-    const hashInput = `${nowDate.toDateString()}@${TZ}`;
-    const hash = createHash('md5').update(hashInput).digest('hex');
-    const numericHash = parseInt(hash.slice(0, 8), 16); // Use first 8 characters of hash
-    const hashRange = endOfDay.getTime() - startOfDay.getTime();
-    const hashTime = startOfDay.getTime() + (numericHash % hashRange);
+    const hashTime = calculateHashTime(nowDate, TZ, startOfDay, endOfDay);
 
     // Check if the hash for today's time is in the future
     if (hashTime > now && !forced) {

@@ -4,6 +4,7 @@ import { commentsRouter } from './comments';
 import { settingsRouter } from './settings';
 import { postsRouter } from './posts';
 import { userReactionsRouter } from './userReactions';
+import { previewRouter } from './preview';
 
 export const appRouter = router({
   reactions: reactionsRouter,
@@ -11,6 +12,7 @@ export const appRouter = router({
   settings: settingsRouter,
   userReactions: userReactionsRouter,
   posts: postsRouter,
+  preview: previewRouter,
 });
 
 export type AppRouter = typeof appRouter;

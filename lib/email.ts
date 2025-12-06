@@ -133,7 +133,7 @@ export function renderTemplate(payload: TemplatePayload): RenderedTemplate {
 			<h1>${title}</h1>
 			<p>Es ist Zeit dein Crew Now für heute zu posten.</p>
 			${ctaUrl ? `<p><a class="btn" href="${ctaUrl}">Jetzt posten</a></p>` : ''}
-			<p class="muted">Start: ${payload.startDate.toLocaleString()}</p>
+			<p class="muted">Start: ${payload.startDate.toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</p>
 		`)
 		const text = `Crew Now Time! Es ist Zeit dein Crew Now für heute zu posten.${ctaUrl ? `\nJetzt posten: ${ctaUrl}` : ''}`
 		return { subject: 'Crew Now Time!', html, text }

@@ -94,7 +94,7 @@ export default async function MomentsPage() {
                 <h3 className="text-lg font-semibold hover:underline">{wochentag(new Date(momentItem.startDate).getDay())} der {new Date(momentItem.startDate).toLocaleDateString("de-DE")}</h3>
               </Link>
               <p className="text-sm text-gray-500 mb-3">
-                Geschehen um {new Date(momentItem.startDate).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                Geschehen um {new Date(momentItem.startDate).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}
               </p>
               
               <div className="flex flex-wrap gap-3">
