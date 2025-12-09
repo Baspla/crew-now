@@ -334,6 +334,7 @@ export async function notifyCheckInReminder(posterNames: string[]) {
 		.select({
 			email: users.email,
 			userId: users.id,
+			name: users.name,
 			ntfyTopic: users.ntfyTopic,
 			emailNotify: userSettings.emailNotifyCheckInReminder,
 			ntfyNotify: userSettings.ntfyNotifyCheckInReminder
@@ -347,10 +348,12 @@ export async function notifyCheckInReminder(posterNames: string[]) {
 
 	if (!recipients.length) return { sent: 0 }
 
-	const rendered = renderTemplate({ type: 'check-in-reminder', posterNames })
 	let sent = 0
 
 	for (const r of recipients) {
+		const filteredPosterNames = posterNames.filter(name => name !== r.name);
+		const rendered = renderTemplate({ type: 'check-in-reminder', posterNames: filteredPosterNames })
+
 		if (r.emailNotify === 1 && r.email) {
 			try {
 				await sendEmail({ to: r.email, subject: rendered.subject, html: rendered.html, text: rendered.text })
@@ -361,11 +364,11 @@ export async function notifyCheckInReminder(posterNames: string[]) {
 		}
 		if (r.ntfyNotify === 1 && r.ntfyTopic) {
 			try {
-				const isBeFirst = posterNames.length === 0;
+				const isBeFirst = filteredPosterNames.length === 0;
 				let message = "Noch hat niemand gepostet. Sei der Erste!";
 
 				if (!isBeFirst) {
-					const names = posterNames;
+					const names = filteredPosterNames;
 					let namesStr = names[0];
 					if (names.length === 2) namesStr = `${names[0]} und ${names[1]}`;
 					else if (names.length > 2) namesStr = `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
