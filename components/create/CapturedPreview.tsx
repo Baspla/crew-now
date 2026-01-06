@@ -23,6 +23,8 @@ export default function CapturedPreview({
   postsRemaining,
 }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   // Erzeuge eine stabile UUID für diesen Captured-Durchlauf
   const postId = useMemo(() => crypto.randomUUID(), []);
   const handleForm = async (e: FormEvent<HTMLFormElement>) => {
@@ -32,12 +34,16 @@ export default function CapturedPreview({
     fd.set("postId", postId);
     try {
       setIsSubmitting(true);
+      setErrorMessage(null);
       await onSubmit(fd);
     } catch (err) {
       // Bei Fehlern UI wieder entsperren
       setIsSubmitting(false);
-      // Optional: Fehlerbehandlung/Toast könnte hier erfolgen
-      throw err;
+      if (err instanceof Error) {
+        setErrorMessage(err.message);
+      } else {
+        setErrorMessage("Ein unbekannter Fehler ist aufgetreten.");
+      }
     }
   };
   return (
@@ -64,6 +70,13 @@ export default function CapturedPreview({
           className="w-full p-3 rounded-lg border border-gray-300 text-sm resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
+
+      {errorMessage && (
+        <div className="p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="flex space-x-3">
         <form onSubmit={handleForm} className="flex-1">
           {/* Hidden Felder für Bilder */}

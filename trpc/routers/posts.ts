@@ -15,7 +15,7 @@ export const postsRouter = router({
         postId: z.string().uuid().optional(),
         imageUrl: z.string().min(1, "Back image is required"),
         frontImageUrl: z.string().optional().nullable(),
-        caption: z.string().max(80).optional().nullable(),
+        caption: z.string().max(160, "Die Bildunterschrift ist zu lang (max. 160 Zeichen).").optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
