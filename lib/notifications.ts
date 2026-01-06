@@ -43,8 +43,7 @@ export async function notifyMomentStart(startDate: Date) {
 					title: "Zeit für dein Crew Now!",
 					message: "Es ist Zeit dein Crew Now Moment zu teilen.",
 					tags: ["camera"],
-					priority: 4,
-					actions: [{ action: 'view', label: 'Jetzt aufnehmen', url: `${process.env.NEXT_PUBLIC_APP_URL}/create` }]
+					click: `${process.env.NEXT_PUBLIC_APP_URL}/create`
 				})
 				sent++
 			} catch (e) {
@@ -90,7 +89,7 @@ export async function notifyNewPost(postId: string, authorId: string, authorName
 					title: "Neuer Post",
 					message: `${authorName || 'Jemand'} hat einen neuen Post erstellt.`,
 					tags: ["camera_flash"],
-					actions: [{ action: 'view', label: 'Ansehen', url: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}` }]
+					click: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}`
 				})
 				sent++
 			} catch (e) {
@@ -216,7 +215,7 @@ export async function notifyCommentCreated(opts: { postId: string; actorId: stri
 					title: "Neuer Kommentar",
 					message: `${actorName || 'Jemand'} hat ein Kommentar hinterlassen.`,
 					tags: ["speech_balloon"],
-					actions: [{ action: 'view', label: 'Ansehen', url: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}` }]
+					click: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}`
 				})
 				sent++
 			} catch (e) {
@@ -318,7 +317,7 @@ export async function notifyReactionCreated(opts: { postId: string; actorId: str
 					title: "Neue Reaktion",
 					message: `${actorName || 'Jemand'} hat auf einen Post reagiert.`,
 					tags: ["heart"],
-					actions: [{ action: 'view', label: 'Ansehen', url: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}` }]
+					click: `${process.env.NEXT_PUBLIC_APP_URL}/posts/${postId}`
 				})
 				sent++
 			} catch (e) {
