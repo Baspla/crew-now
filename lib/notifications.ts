@@ -379,11 +379,7 @@ export async function notifyCheckInReminder(posterNames: string[]) {
 					title: rendered.subject,
 					message,
 					tags: isBeFirst ? ["rocket"] : ["eyes"],
-					actions: [{ 
-						action: 'view', 
-						label: isBeFirst ? 'Jetzt posten' : 'Ansehen', 
-						url: `${process.env.NEXT_PUBLIC_APP_URL}/${isBeFirst ? 'create' : 'feed'}` 
-					}]
+					click: `${process.env.NEXT_PUBLIC_APP_URL}/${isBeFirst ? 'create' : 'feed'}` 
 				})
 				sent++
 			} catch (e) {
