@@ -33,6 +33,7 @@ export type PostWithReactions = Post & {
 
 export default function Post({ post, link, userName, userImage, currentUserId }: PostProps) {
     const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
+    const [isEditing, setIsEditing] = React.useState(false);
     const trpc = useTRPC();
     const router = useRouter();
 
@@ -52,6 +53,8 @@ export default function Post({ post, link, userName, userImage, currentUserId }:
                 userName={userName}
                 creationDate={post.creationDate}
                 currentUserId={currentUserId}
+                isEditing={isEditing}
+                onEditClick={() => setIsEditing(!isEditing)}
             />)}
             <PostImage
                 imageUrl={post.imageUrl}
@@ -116,8 +119,13 @@ export default function Post({ post, link, userName, userImage, currentUserId }:
                     }}
                 />
             </PostImage>
-            {post.caption && (
-            <Caption caption={post.caption} />
+            {(post.caption || isEditing) && (
+            <Caption 
+                caption={post.caption} 
+                isEditing={isEditing} 
+                postId={post.id}
+                onCancel={() => setIsEditing(false)}
+            />
             )}
         </div>
     );

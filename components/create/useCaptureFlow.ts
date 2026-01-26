@@ -119,7 +119,21 @@ export function useCaptureFlow() {
           console.warn("Smart camera selection failed", err);
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          if (err instanceof Error && err.name === "OverconstrainedError") {
+            console.warn("OverconstrainedError caught. Retrying with loose constraints.");
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode },
+              audio: false,
+            });
+          } else {
+            throw err;
+          }
+        }
+
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -142,6 +156,7 @@ export function useCaptureFlow() {
           if (err.name === "NotAllowedError") setError("Kamera-Zugriff wurde verweigert. Bitte erlauben.");
           else if (err.name === "NotFoundError") setError("Keine Kamera gefunden.");
           else if (err.name === "NotReadableError") setError("Kamera ist bereits in Verwendung.");
+          else if (err.name === "OverconstrainedError") setError("Kamera unterstützt die gewünschte Auflösung nicht.");
           else setError(`Kamera-Fehler: ${err.message}`);
         } else setError("Unbekannter Kamera-Fehler aufgetreten.");
         setCurrentStep("error");

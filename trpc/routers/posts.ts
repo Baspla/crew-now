@@ -79,6 +79,32 @@ export const postsRouter = router({
       }
     }),
 
+  update: protectedProcedure
+    .input(z.object({
+      postId: z.string().uuid(),
+      caption: z.string().max(160, "Die Bildunterschrift ist zu lang (max. 160 Zeichen).").nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session!.user!.id!;
+
+      const post = await db.select().from(postsTable).where(eq(postsTable.id, input.postId)).get();
+
+      if (!post) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+      }
+
+      if (post.userId !== userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to update this post" });
+      }
+
+      await db
+        .update(postsTable)
+        .set({ caption: input.caption })
+        .where(eq(postsTable.id, input.postId));
+
+      return { success: true };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ postId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
