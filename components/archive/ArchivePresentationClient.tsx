@@ -26,6 +26,7 @@ interface ArchivePresentationClientProps {
 }
 
 export default function ArchivePresentationClient({ posts, musicSrc, currentUserId }: ArchivePresentationClientProps) {
+  const intervalOptions = [0.3, 0.5, 0.7, 1, 2, 5] as const;
   const [selectedRange, setSelectedRange] = useState<RangeKey | null>(null);
   const [scope, setScope] = useState<"me" | "all">("all");
   const [holdSeconds, setHoldSeconds] = useState(2);
@@ -283,9 +284,9 @@ export default function ArchivePresentationClient({ posts, musicSrc, currentUser
           onChange={(event) => setHoldSeconds(Number(event.target.value))}
           className="rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
         >
-          {[1, 2, 3, 4, 5].map((seconds) => (
+          {intervalOptions.map((seconds) => (
             <option key={seconds} value={seconds}>
-              {seconds} Sekunde{seconds > 1 ? "n" : ""}
+              {seconds} Sekunde{seconds != 1 ? "n" : ""}
             </option>
           ))}
         </select>
