@@ -66,6 +66,18 @@ export async function GET(
       case '.svg':
         contentType = 'image/svg+xml';
         break;
+      case '.mp3':
+        contentType = 'audio/mpeg';
+        break;
+      case '.wav':
+        contentType = 'audio/wav';
+        break;
+      case '.ogg':
+        contentType = 'audio/ogg';
+        break;
+      case '.m4a':
+        contentType = 'audio/mp4';
+        break;
     }
     
     // Setze Cache-Header für bessere Performance

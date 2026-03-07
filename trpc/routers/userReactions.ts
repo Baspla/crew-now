@@ -49,9 +49,8 @@ export const userReactionsRouter = router({
           .resize(480, 480, { fit: "cover", position: "centre" })
           .jpeg({ quality: 85 })
           .toBuffer();
-      } catch (err) {
-        console.error("Bildverarbeitung mit sharp fehlgeschlagen, speichere Originalbild:", err);
-        processedBuffer = buf;
+      } catch {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ungültiges Bildformat" });
       }
 
       await writeFile(filepath, processedBuffer);

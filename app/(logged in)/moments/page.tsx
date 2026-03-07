@@ -84,6 +84,14 @@ export default async function MomentsPage() {
   return (
     <main>
       <PageHead title="Archiv" subtitle="Memories of days gone by" backUrl="/feed" />
+      <div className="mb-2 px-4">
+        <Link
+          href="/moments/presentation"
+          className="block w-full rounded-md bg-linear-to-r from-zinc-200/50 via-white to-zinc-200/50 px-6 py-8 text-center text-2xl font-semibold text-zinc-900 transition-opacity hover:opacity-90 dark:from-zinc-700/50 dark:via-black dark:to-zinc-700/50 dark:text-zinc-100"
+        >
+          Slideshow
+        </Link>
+      </div>
       <div>
         {allMoments.length === 0 ? (
           <p>Noch keine Einträge im Archiv vorhanden.</p>
