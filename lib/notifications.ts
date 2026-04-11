@@ -350,6 +350,10 @@ export async function notifyCheckInReminder(posterNames: string[]) {
 	let sent = 0
 
 	for (const r of recipients) {
+		if(posterNames.length == 1 && posterNames[0] === r.name){
+			// Don't send reminder to the only poster
+			continue;
+		}
 		const filteredPosterNames = posterNames.filter(name => name !== r.name);
 		const rendered = renderTemplate({ type: 'check-in-reminder', posterNames: filteredPosterNames })
 
