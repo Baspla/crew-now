@@ -25,17 +25,14 @@ export default function InfiniteScrollFeed({ currentUserId }: InfiniteScrollFeed
   const trpc = useTRPC();
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, error } = useInfiniteQuery({
-    queryKey: ["posts", "feed", "infinite"],
-    queryFn: async ({ pageParam }: { pageParam?: Date }) => {
-      return await (trpc.posts.feedInfinite as any)({
-        limit: 20,
-        cursor: pageParam,
-      });
-    },
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor ?? undefined,
-    initialPageParam: undefined as Date | undefined,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, error } = useInfiniteQuery(
+    trpc.posts.feedInfinite.infiniteQueryOptions(
+      { limit: 20 },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
+      }
+    )
+  );
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
