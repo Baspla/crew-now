@@ -1,4 +1,4 @@
-import { protectedProcedure, router } from "../init";
+import { protectedProcedure, router, publicProcedure } from "../init";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { db, posts as postsTable } from "@/lib/db/schema";
@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { processAndSave, deleteImage } from "@/lib/image";
 import { postsRemainingForUser } from "@/lib/postingRules";
 import { notifyNewPost } from "@/lib/notifications";
+import { getFeedPostsPaginated } from "@/lib/feed";
 import crypto from "crypto";
 
 export const postsRouter = router({
@@ -128,5 +129,30 @@ export const postsRouter = router({
       await db.delete(postsTable).where(eq(postsTable.id, input.postId));
 
       return { success: true };
+    }),
+
+  feedInfinite: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        cursor: z.date().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const posts = await getFeedPostsPaginated(input.limit + 1, input.cursor);
+      
+      let nextCursor: Date | undefined = undefined;
+      if (posts.length > input.limit) {
+        // Es gibt mehr Daten
+        const lastPost = posts.pop();
+        if (lastPost) {
+          nextCursor = lastPost.creationDate;
+        }
+      }
+
+      return {
+        items: posts,
+        nextCursor,
+      };
     }),
 });

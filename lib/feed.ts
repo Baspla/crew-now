@@ -160,3 +160,104 @@ export async function getPostsForMoment(momentId: string, limit: number = 100): 
 
   return getPostsWithReactions({ limit, where: condition });
 }
+
+/**
+ * Feed-Posts mit Cursor-basierter Pagination für Infinite Scroll.
+ * Liefert alle Posts ab dem neuesten, optional mit Cursor zum Laden älterer Posts.
+ */
+export async function getFeedPostsPaginated(
+  limit: number = 20,
+  cursor?: Date // Die creationDate des letzten geladenen Posts
+): Promise<FeedPost[]> {
+  let query = db
+    .select({
+      id: posts.id,
+      imageUrl: posts.imageUrl,
+      frontImageUrl: posts.frontImageUrl,
+      caption: posts.caption,
+      creationDate: posts.creationDate,
+      userId: posts.userId,
+      userName: users.name,
+      userImage: users.image,
+    })
+    .from(posts)
+    .leftJoin(users, eq(posts.userId, users.id));
+
+  // Wenn cursor vorhanden, ältere Posts laden (creationDate < cursor)
+  if (cursor) {
+    query = query.where(lte(posts.creationDate, new Date(cursor)));
+  }
+
+  const allPosts = await query.orderBy(desc(posts.creationDate)).limit(limit);
+
+  // Reaktionen und Kommentare laden
+  const postIds = allPosts.map((p) => p.id);
+  type ReactionForPost = { id: string | number; userId: string; emoji?: string; imageUrl?: string };
+  let postsWithReactions = allPosts as (typeof allPosts[number] & {
+    reactions?: ReactionForPost[];
+    commentCount: number;
+  })[];
+
+  if (postIds.length > 0) {
+    const allReactions = await db
+      .select({
+        id: reactionsTable.id,
+        postId: reactionsTable.postId,
+        userId: reactionsTable.userId,
+        emoji: userReactions.emoji,
+        imageUrl: userReactions.imageUrl,
+        creationDate: reactionsTable.creationDate,
+      })
+      .from(reactionsTable)
+      .leftJoin(userReactions, eq(reactionsTable.reactionId, userReactions.id))
+      .where(inArray(reactionsTable.postId, postIds))
+      .orderBy(desc(reactionsTable.creationDate));
+
+    const grouped = new Map<
+      string,
+      { id: string; userId: string; emoji?: string; imageUrl?: string; creationDate: Date }[]
+    >();
+    for (const r of allReactions) {
+      const list = grouped.get(r.postId) ?? [];
+      const item: {
+        id: string;
+        userId: string;
+        emoji?: string;
+        imageUrl?: string;
+        creationDate: Date;
+      } = {
+        id: r.id,
+        userId: r.userId,
+        creationDate: r.creationDate,
+        ...(r.emoji ? { emoji: r.emoji } : {}),
+        ...(r.imageUrl ? { imageUrl: r.imageUrl } : {}),
+      };
+      list.push(item);
+      grouped.set(r.postId, list);
+    }
+
+    const commentCounts = await db
+      .select({
+        postId: comments.postId,
+        count: count(comments.id),
+      })
+      .from(comments)
+      .where(inArray(comments.postId, postIds))
+      .groupBy(comments.postId);
+
+    const commentCountMap = new Map<string, number>();
+    for (const c of commentCounts) {
+      commentCountMap.set(c.postId, c.count);
+    }
+
+    postsWithReactions = allPosts.map((p) => ({
+      ...p,
+      reactions: grouped.get(p.id)?.map(({ creationDate, ...rest }) => rest) ?? [],
+      commentCount: commentCountMap.get(p.id) ?? 0,
+    }));
+  } else {
+    postsWithReactions = [];
+  }
+
+  return postsWithReactions as FeedPost[];
+}
