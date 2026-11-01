@@ -1,7 +1,10 @@
-import { db, moment, posts, users } from "@/lib/db/schema";
-import { desc, eq, and, gte } from "drizzle-orm";
+import { db, moment } from "@/lib/db/schema";
+// import { posts, users } from "@/lib/db/schema"; // Needed by the commented-out reminder.
+import { desc, eq } from "drizzle-orm";
+// import { and, gte } from "drizzle-orm"; // Needed by the commented-out reminder.
 import { NextResponse } from "next/server";
-import { notifyMomentStart, notifyCheckInReminder } from '@/lib/notifications';
+import { notifyMomentStart } from '@/lib/notifications';
+// import { notifyCheckInReminder } from '@/lib/notifications';
 import { calculateHashTime, getDateParts } from "@/lib/time";
 
 export const dynamic = 'force-dynamic'
@@ -26,9 +29,10 @@ export async function GET(request: Request) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
     try {
-        console.log("Trying to create new moment and send check-in reminder if needed");
+        console.log("Trying to create new moment");
         await createNewMoment(forced);
-        await checkAndSendReminder();
+        // Check-in reminders are disabled for now; implementation retained below.
+        // await checkAndSendReminder();
         return NextResponse.json({ success: true });
     } catch (err) {
         console.error('Error creating new moment', err);
@@ -123,6 +127,7 @@ async function createNewMoment(forced: boolean) {
     return;
 }
 
+/*
 async function checkAndSendReminder() {
     // 1. Get latest moment
     const lastMoment = await db.select().from(moment).orderBy(desc(moment.startDate)).limit(1);
@@ -183,3 +188,4 @@ async function checkAndSendReminder() {
     // 5. Mark as sent
     await db.update(moment).set({ reminderSent: 1 }).where(eq(moment.id, m.id));
 }
+*/
