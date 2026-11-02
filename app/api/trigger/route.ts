@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
     // This endpoint triggers a new moment creation.
     // It requires an internal token via header `x-internal-token` or query `token`
+    return; // Disabled for now, as we don't want external triggers to create moments.
     const url = new URL(request.url);
     const tokenFromQuery = url.searchParams.get('token');
     const forced = url.searchParams.get('force') === 'true';

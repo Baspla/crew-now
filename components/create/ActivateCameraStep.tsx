@@ -1,5 +1,7 @@
 "use client";
 
+const gnagHomeUrl = process.env.NEXT_PUBLIC_GNAG_HOME_URL ?? "#";
+
 interface Props {
   onActivate: () => void | Promise<void>;
   postsRemaining: number | null;
@@ -25,11 +27,19 @@ export default function ActivateCameraStep({ onActivate, postsRemaining, disable
         )}
         */}
       </div>
+      <a
+        href={gnagHomeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="px-8 py-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base shadow-md transition-colors"
+      >
+        Gnag Home öffnen
+      </a>
       <button
         type="button"
         onClick={() => onActivate()}
         disabled={disabled || noPostsLeft}
-        className="px-8 py-4 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-500 disabled:cursor-not-allowed text-white font-semibold text-base shadow-md transition-colors"
+        className="px-5 py-2.5 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:bg-zinc-100 dark:disabled:bg-zinc-900 disabled:cursor-not-allowed text-zinc-600 dark:text-zinc-300 disabled:text-zinc-400 dark:disabled:text-zinc-600 font-medium text-sm transition-colors"
       >
         Kamera aktivieren
       </button>

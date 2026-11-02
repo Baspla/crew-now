@@ -6,6 +6,7 @@ import { sendNtfy } from '@/lib/ntfy'
 // Benachrichtigungen: granular pro Ereignis
 
 export async function notifyMomentStart(startDate: Date) {
+	return; // Disabled because gnag home is now the main app.
 	const rows = await db
 		.select({
 			email: users.email,
