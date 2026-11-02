@@ -1,7 +1,5 @@
 "use client";
 
-const gnagHomeUrl = process.env.NEXT_PUBLIC_GNAG_HOME_URL ?? "#";
-
 interface Props {
   onActivate: () => void | Promise<void>;
   postsRemaining: number | null;
@@ -28,7 +26,7 @@ export default function ActivateCameraStep({ onActivate, postsRemaining, disable
         */}
       </div>
       <a
-        href={gnagHomeUrl}
+        href="https://home.gnag.eu/crewnow"
         target="_blank"
         rel="noopener noreferrer"
         className="px-8 py-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base shadow-md transition-colors"
